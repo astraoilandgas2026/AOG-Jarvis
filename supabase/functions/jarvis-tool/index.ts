@@ -24,7 +24,7 @@ function searchPattern(q:string){
 
 async function unifiedContext(db:any,q:string,limit:number){
   const tokens=searchPattern(q);
-  const patterns=tokens.map(t=>`%${t.replace(/[%_]/g,"\\
+  const patterns=tokens.map(t=>"%" + t.replace(/[%_]/g,"\\$&") + "%");
 Deno.serve(async(req:Request)=>{")}%`);
   const supplierOr=patterns.map(p=>`legal_name.ilike.${p},trading_name.ilike.${p},tax_id.ilike.${p}`).join(",");
   const domainOr=patterns.map(p=>`name.ilike.${p},code.ilike.${p},description.ilike.${p}`).join(",");
