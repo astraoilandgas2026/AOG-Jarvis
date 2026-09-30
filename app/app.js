@@ -2,35 +2,33 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.105.0";
 import { CONFIG } from "./config.js";
 import { createOrb } from "./modules/orb.js";
 import { createVoice } from "./modules/voice.js";
-import { detectModule, getModules } from "./modules/router.js";
 import { getTool } from "./core/tool-registry.js";
 import { classifyIntent } from "./core/intent-router.js";
 import { normalizeSupplierQuery } from "./core/query-normalizer.js";
 const supabase=createClient(CONFIG.supabaseUrl,CONFIG.supabasePublishableKey);
 const $=s=>document.querySelector(s);
 const command=$("#command"),messages=$("#messages"),chat=$("#chat"),home=$("#home");
-const workspace=$("#workspace"),logout=$("#logout"),install=$("#install"),result=$("#result"),moduleTitle=$("#module-title"),moduleContent=$("#module-content"),modulesNav=$("#modules");
+const logout=$("#logout"),install=$("#install"),result=$("#result");
 let voice=null;
 const orb=createOrb({root:$("#orb"),status:$("#orb-status"),onActivate:()=>voice?.start()});
 voice=createVoice({orb,onTranscript:t=>{command.value=t;execute(t)},onError:e=>setStatus(e)});
-const modules=getModules();let activeModule="astra",deferredInstall=null,history=[];
+let deferredInstall=null,history=[];
 function setStatus(text){$("#orb-status").textContent=text}
 function speak(text){if(!("speechSynthesis"in window))return;window.speechSynthesis.cancel();orb.setState("speaking");const u=new SpeechSynthesisUtterance(text);u.lang="es-ES";u.rate=.98;u.onend=()=>orb.setState("idle");window.speechSynthesis.speak(u)}
 function addMessage(role,text){const el=document.createElement("div");el.className="message "+role;el.textContent=text;messages.appendChild(el);messages.scrollTop=messages.scrollHeight}
 async function addArtifactMessage(artifact){const {renderArtifact}=await import("./modules/documents.js");const el=document.createElement("div");el.className="message assistant artifact-message";const card=document.createElement("div");renderArtifact(card,artifact);el.appendChild(card);messages.appendChild(el);messages.scrollTop=messages.scrollHeight}
-function renderModules(){modulesNav.innerHTML="";Object.entries(modules).forEach(([key,m])=>{const b=document.createElement("button");b.textContent=m.label;b.dataset.module=key;b.className=key===activeModule?"active":"";b.onclick=()=>selectModule(key);modulesNav.appendChild(b)})}
-function selectModule(key){activeModule=modules[key]?key:"conversation";moduleTitle.textContent=modules[activeModule].label;moduleContent.innerHTML="<p class='module-description'>"+modules[activeModule].description+"</p>";modulesNav.querySelectorAll("button").forEach(b=>b.classList.toggle("active",b.dataset.module===activeModule))}
-function renderSession(session){const signed=Boolean(session?.user);home.classList.remove("hidden");chat.classList.remove("hidden");workspace.classList.toggle("hidden",!signed);logout.classList.toggle("hidden",!signed);home.classList.toggle("compact",!signed);if(signed)setStatus("EMMA LISTA");else setStatus("EMMA LISTA · MODO BÁSICO")}
+function renderSession(session){const signed=Boolean(session?.user);home.classList.remove("hidden");chat.classList.remove("hidden");logout.classList.toggle("hidden",!signed);home.classList.toggle("compact",!signed);if(signed)setStatus("EMMA LISTA");else setStatus("EMMA LISTA · MODO BÁSICO")}
 async function ensureAuth(){const {data,error:sessionError}=await supabase.auth.getSession();if(sessionError)throw new Error("AUTH_SESSION: "+sessionError.message);if(data?.session?.access_token)return data.session;setStatus("CONECTANDO EMMA");const {data:anon,error}=await supabase.auth.signInAnonymously();if(error||!anon?.session)throw new Error("AUTH_ANON: "+(error?.message||"No se pudo autenticar la sesión anónima."));renderSession(anon.session);return anon.session}
 async function invoke(name,body){await ensureAuth();const {data,error}=await supabase.functions.invoke(name,{body});if(!error)return data;let detail="";try{if(error.context){const response=error.context instanceof Response?error.context:null;if(response){const clone=response.clone();try{const payload=await clone.json();detail=payload?.error||payload?.message||JSON.stringify(payload)}catch{detail=await response.text()}}}}catch{}throw new Error((detail||error.message||"Edge Function error").slice(0,800))}
-async function invokeChat(q){
+async function invokeContext(q){return await invokeTool("astra.context",{q,limit:8})}
+async function invokeChat(q,context=null){
   await ensureAuth();
   const session=(await supabase.auth.getSession()).data.session;
   if(!session?.access_token)throw new Error("AUTH_SESSION");
   const response=await fetch(`${CONFIG.supabaseUrl}/functions/v1/jarvis-chat`,{
     method:"POST",
     headers:{"Authorization":`Bearer ${session.access_token}`,"apikey":CONFIG.supabasePublishableKey,"Content-Type":"application/json"},
-    body:JSON.stringify({message:q,history}),cache:"no-store"
+    body:JSON.stringify({message:q,history,context}),cache:"no-store"
   });
   if(!response.ok)throw new Error((await response.text()).slice(0,800));
   const type=response.headers.get("content-type")||"";
@@ -72,6 +70,15 @@ async function invokeGitHub(q){const tool=getTool("github.read");const match=q.m
 async function invokeTool(toolId,body={}){const tool=getTool(toolId);if(!tool?.functionName)throw new Error("TOOL_CONFIG: "+toolId);return await invoke(tool.functionName,{tool:toolId,...body})}
 async function invokeGoogle(action,body={}){const res=await fetch(CONFIG.googleBridgeUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action,...body})});const data=await res.json();if(!data?.ok)throw new Error("GOOGLE_BRIDGE: "+(data?.error||"solicitud rechazada"));return data}
 async function invokeMail(action,body={}){const tool=getTool(action==="send"?"mail.send":"mail.read");if(!tool?.functionName)throw new Error("TOOL_CONFIG: correo no configurado");return await invoke(tool.functionName,{action,...body})}
+function parseDueAt(q){
+  const now=new Date();
+  const rel=q.match(/en\\s+(\\d+)\\s*(minutos?|horas?)/i);
+  if(rel){const d=new Date(now);const n=Number(rel[1]);d.setMinutes(d.getMinutes()+(rel[2].toLowerCase().startsWith("hora")?n*60:n));return d.toISOString()}
+  const hm=q.match(/(?:hoy|mañana|manana)\\s+(?:a\\s+las\\s+)?(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm)?/i);
+  if(hm){let h=Number(hm[1]);const min=Number(hm[2]||0);const ap=hm[3]?.toLowerCase();if(ap==="pm"&&h<12)h+=12;if(ap==="am"&&h===12)h=0;const d=new Date(now);if(/mañana|manana/i.test(hm[0]))d.setDate(d.getDate()+1);d.setHours(h,min,0,0);return d.toISOString()}
+  return null;
+}
+function parseTaskTitle(q){return q.replace(/^(emma[,\\s]*)?(pon|crea|agrega|añade|anota|apunta|programa|recuérdame|recuerdame|recuerda|alarma|recordatorio)(\\s+(una|un|como|que|de|para))?/i,"").trim()||q}
 function parseSendEmail(q){const match=q.match(/(?:envía|envia|manda|mandar)\s+(?:un\s+)?(?:correo|email|mail)\s+(?:a|para)\s+([^\s]+)\s+(?:con\s+)?(?:asunto|subject)\s*[:=-]\s*(.+?)\s+(?:cuerpo|body|mensaje)\s*[:=-]\s*([\s\S]+)$/i);if(!match)return null;return{to:[match[1]],subject:match[2].trim(),text:match[3].trim()}}
 function formatMail(data){const rows=data?.data||[];if(!rows.length)return data?.mailbox?"No hay correos que coincidan en "+data.mailbox+".":"No encontré correos.";return rows.slice(0,10).map((m,i)=>`${i+1}. ${m.subject||"(sin asunto)"} — ${m.from?.address||"remitente desconocido"} — ${m.date?new Date(m.date).toLocaleString("es-CL"): ""} [UID ${m.uid}]`).join("\n")}
 function fastReply(q){
@@ -79,7 +86,9 @@ function fastReply(q){
   if(/^(hola|holi|hey|hello|buenas)[!.?,\s]*$/i.test(q))return "Hola, Leíto. Aquí estoy.";
   return null;
 }
-async function execute(text){const q=text.trim();if(!q)return;command.value="";addMessage("user",q);const quick=fastReply(q);if(quick){addMessage("assistant",quick);speak(quick);return}orb.setState("thinking");const intent=classifyIntent(q);const target=intent.module||detectModule(q);selectModule(target);try{
+async function execute(text){const q=text.trim();if(!q)return;command.value="";addMessage("user",q);const quick=fastReply(q);if(quick){addMessage("assistant",quick);speak(quick);return}orb.setState("thinking");const intent=classifyIntent(q);try{
+if(intent.type==="memory_write"){const data=await invokeTool("memory.write",{q,domain:"personal",memory_type:"note",importance:4});const reply="Anotado. Queda guardado en mi memoria.";addMessage("assistant",reply);speak(reply);return}
+if(intent.type==="task_create"){const title=parseTaskTitle(q);const due_at=parseDueAt(q);const data=await invokeTool("personal.task.create",{title,due_at,priority:/urgente|urgent/i.test(q)?"urgent":"normal"});const reply=due_at?"Listo. Quedó programado.":"Listo. Quedó pendiente.";addMessage("assistant",reply);speak(reply);return}
 if(intent.tool==="gmail.read"){const data=await invokeGoogle("gmail.list",{query:q.match(/(?:busca|buscar|encuentra)\s+(.+)/i)?.[1]||"in:inbox",max:10});result.textContent=JSON.stringify(data,null,2);const reply=data?.count?`Encontré ${data.count} correos en Gmail.`:"No encontré correos en Gmail.";addMessage("assistant",reply);speak(reply);return}
 if(intent.type==="action"&&intent.tool==="gmail.send"){const m=q.match(/(?:gmail.*?)(?:a|para)\s+([^\s]+).*?(?:asunto|subject)\s*[:=-]\s*(.+?)\s+(?:cuerpo|body|mensaje)\s*[:=-]\s*([\s\S]+)$/i);if(!m)throw new Error("Formato: Gmail a EMAIL asunto: ASUNTO cuerpo: MENSAJE");if(!window.confirm(`Enviar Gmail a ${m[1]}?\n\nAsunto: ${m[2]}`)){addMessage("assistant","Envío cancelado.");return}const data=await invokeGoogle("gmail.send",{to:m[1],subject:m[2].trim(),text:m[3].trim()});result.textContent=JSON.stringify(data,null,2);addMessage("assistant",data?.sent?"Gmail enviado.":"No se confirmó el envío.");speak(data?.sent?"Gmail enviado.":"No se confirmó el envío.");return}
 if(intent.tool==="calendar.read"){const data=await invokeGoogle("calendar.list",{});result.textContent=JSON.stringify(data,null,2);const reply=data?.count?`Encontré ${data.count} eventos en tu calendario.`:"No hay eventos en el período consultado.";addMessage("assistant",reply);speak(reply);return}
@@ -87,13 +96,13 @@ if(intent.type==="action"&&intent.tool==="calendar.create")throw new Error("La c
 if(intent.type==="action"&&intent.task==="generate_document"){const {generateDocument,renderArtifact}=await import("./modules/documents.js");const format=/pptx|powerpoint/i.test(q)?"pptx":/word|docx/i.test(q)?"docx":"pdf";const body=q.replace(/^(emma[,\s]?\s*)?(crea|genera|hazme|prepara)\s*/i,"");const artifact=await generateDocument({format,title:"Documento Emma",body});renderArtifact(result,artifact);await addArtifactMessage(artifact);addMessage("assistant","Listo. Generé el documento y lo dejé aquí mismo.");speak("Listo. Generé el documento.");return}
 if(intent.type==="action"&&intent.tool==="mail.send"){const email=parseSendEmail(q);if(!email)throw new Error("Formato: envía un correo a EMAIL asunto: ASUNTO cuerpo: MENSAJE");if(!window.confirm(`Enviar desde Astra a ${email.to[0]}?\n\nAsunto: ${email.subject}`)){addMessage("assistant","Envío cancelado.");return}const data=await invokeMail("send",email);result.textContent=JSON.stringify(data,null,2);const reply=data?.sent?"Correo enviado desde "+data.mailbox+".":"No se confirmó el envío.";addMessage("assistant",reply);speak(reply);return}
 if(intent.type==="tool"&&intent.tool==="mail.read"){const data=await invokeMail(q.match(/(?:busca|buscar|encuentra)\s+(.+)/i)?.[1]?"search":"list",{q:q.match(/(?:busca|buscar|encuentra)\s+(.+)/i)?.[1]||""});result.textContent=JSON.stringify(data,null,2);const reply=formatMail(data);addMessage("assistant",reply);speak(data?.count?(`Encontré ${data.count} correos.`):reply);return}
+if(intent.type==="tool"&&intent.tool&&intent.tool.startsWith("astra.")){const data=await invokeContext(q);const context=data?.data||data;const answer=await invokeChat(q,context);result.textContent=JSON.stringify(context,null,2);addMessage("assistant",answer);speak(answer);return}
 if(intent.type==="tool"&&intent.tool){const data=intent.tool==="github.read"?await invokeGitHub(q):await invokeTool(intent.tool,intent.tool==="astra.search_supplier"?{q:normalizeSupplierQuery(q),limit:10}:{q,limit:10});const output=JSON.stringify(data,null,2);result.textContent=output;let reply;if(intent.tool==="github.read"&&data?.ok&&data?.content)reply="Leí "+(data.path||"el archivo")+" del repositorio. El contenido quedó visible en el panel de resultados.";else reply=data?.count?"Encontré "+data.count+" resultado"+(data.count===1?"":"s")+".":"No encontré resultados.";addMessage("assistant",reply);speak(reply);return}
-const answer=await invokeChat(q);addMessage("assistant",answer);result.textContent=answer;speak(answer)
+const context=await invokeContext(q);const answer=await invokeChat(q,context?.data||context);addMessage("assistant",answer);result.textContent=answer;speak(answer)
 }catch(e){const msg=e?.message||String(e);result.textContent="Error: "+msg;addMessage("assistant","Error real: "+msg);speak("Encontré un error. Revisa el panel de resultados.")}finally{if(orb.getState()==="thinking")orb.setState("idle")}}
 logout.onclick=()=>supabase.auth.signOut();$("#execute").onclick=()=>execute(command.value);$("#voice").onclick=()=>voice?.start();command.addEventListener("keydown",e=>{if(e.key==="Enter")execute(command.value)});
 supabase.auth.onAuthStateChange((_event,session)=>renderSession(session));
 const {data:{session}}=await supabase.auth.getSession();
-renderModules();selectModule(activeModule);
 if(session)renderSession(session);else{setStatus("CONECTANDO EMMA");try{await ensureAuth()}catch(error){setStatus("CONFIGURACIÓN DE ACCESO PENDIENTE");console.error("Anonymous auth unavailable",error)}}
 if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=16").catch(()=>{});
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;install.classList.remove("hidden")});install.onclick=async()=>{if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;install.classList.add("hidden")};
