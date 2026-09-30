@@ -33,3 +33,5 @@ E2E browser verification is executed by GitHub Actions with Playwright.
 
 
 <!-- final operational E2E trigger -->
+
+<!-- context optimization verification -->
