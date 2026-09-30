@@ -5,7 +5,7 @@ export function createOrb({ root, status, onActivate }) {
     root.dataset.state = next;
     status.textContent = next === "listening" ? "ESCUCHANDO" :
       next === "thinking" ? "PROCESANDO" :
-      next === "speaking" ? "RESPONDIENDO" : "JARVIS";
+      next === "speaking" ? "RESPONDIENDO" : "";
   };
   root.addEventListener("click", () => onActivate?.());
   return { setState, getState: () => state };
