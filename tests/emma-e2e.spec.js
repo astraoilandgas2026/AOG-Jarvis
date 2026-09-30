@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+test.use({ serviceWorkers: "block" });
 
 test("Emma browser E2E 30 operational cycles", async ({ page }) => {
   const errors=[]; page.on("pageerror",e=>errors.push("PAGEERROR: "+e.message)); page.on("console",m=>{if(m.type()==="error")errors.push("CONSOLE: "+m.text())}); await page.goto("https://astraoilandgas2026.github.io/AOG-Jarvis/?e2e=1", { waitUntil: "networkidle", timeout: 60000 });
