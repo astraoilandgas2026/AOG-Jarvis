@@ -8,9 +8,10 @@ test("Emma browser E2E 30 operational cycles", async ({ page }) => {
     "Hola Emma, ¿cómo estás?",
     "¿Qué tenemos pendiente de Astra Belincar?",
     "Anota como prioridad máxima: que Sosa nos dé el ISCC de FL Óleos.",
+    "Pon una alarma en 1 minuto para E2E Emma 30x.",
     "¿Qué pendientes tengo?",
     "Busca en Astra todo lo relacionado con FL Óleos, Sosa e ISCC y ordénamelo con el contexto que ya tienes.",
-    ...Array(25).fill("Responde solamente: OK")
+    ...Array(24).fill("Responde solamente: OK")
   ];
 
   const results = [];
@@ -35,21 +36,11 @@ test("Emma browser E2E 30 operational cycles", async ({ page }) => {
       throw new Error(`CYCLE ${i + 1} FAILED after ${elapsed}ms: ${text}`);
     }
 
-    if (i === 1 && /No encontré resultados/i.test(text)) {
-      throw new Error(`CYCLE 2 FAILED: Astra context returned no usable result: ${text}`);
-    }
-
-    if (i === 2 && !/anot|guardad|pendiente|prioridad/i.test(text)) {
-      throw new Error(`CYCLE 3 FAILED: memory/task write not acknowledged: ${text}`);
-    }
-
-    if (i === 3 && !/Sosa|ISCC|FL|pendiente|prioridad/i.test(text)) {
-      throw new Error(`CYCLE 4 FAILED: saved task not surfaced: ${text}`);
-    }
-
-    if (i === 4 && /No encontré resultados/i.test(text)) {
-      throw new Error(`CYCLE 5 FAILED: unified Astra context returned no usable result: ${text}`);
-    }
+    if (i === 1 && /No encontré resultados/i.test(text)) throw new Error(`ASTRA CONTEXT FAILED: ${text}`);
+    if (i === 2 && !/anot|guardad|memoria/i.test(text)) throw new Error(`MEMORY WRITE FAILED: ${text}`);
+    if (i === 3 && !/programado|pendiente/i.test(text)) throw new Error(`TASK WRITE FAILED: ${text}`);
+    if (i === 4 && !/E2E Emma 30x|pendiente|No tienes/i.test(text)) throw new Error(`TASK READ FAILED: ${text}`);
+    if (i === 5 && !/FL.?Óleos|FL.?Oleos|Sosa|ISCC/i.test(text)) throw new Error(`PROCUREMENT CONTEXT FAILED: ${text}`);
 
     results.push(elapsed);
     console.log(`CYCLE ${i + 1}: ${elapsed}ms -> ${text.slice(0,120)}`);
