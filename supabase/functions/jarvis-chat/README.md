@@ -2,9 +2,14 @@
 
 Authenticated, server-side AI conversation endpoint.
 
+Provider:
+- Groq Free Plan
+- Endpoint: https://api.groq.com/openai/v1/chat/completions
+- Model: llama-3.3-70b-versatile
+
 Required Supabase secret:
-- OPENAI_API_KEY
+- GROQ_API_KEY
 
 The key must never be placed in `app/` or committed to GitHub.
 
-Current model target: gpt-5.6-luna.
+AI providers remain behind the Jarvis server-side provider layer so another provider can be added later without changing the frontend.
