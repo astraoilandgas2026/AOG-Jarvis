@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test("Emma browser E2E 30 operational cycles", async ({ page }) => {
   await page.goto("https://astraoilandgas2026.github.io/AOG-Jarvis/?e2e=1", { waitUntil: "networkidle", timeout: 60000 });
-  await expect(page.locator("#command")).toBeVisible({ timeout: 30000 });
+  const runtimeErrors=[]; page.on("pageerror", e=>runtimeErrors.push("PAGEERROR: "+e.message)); page.on("console", m=>{if(m.type()==="error")runtimeErrors.push("CONSOLE: "+m.text())});\n  await expect(page.locator("#command")).toBeVisible({ timeout: 30000 });\n  console.log("RUNTIME_ERRORS_AFTER_LOAD:", runtimeErrors.join(" | "));
 
   const messages = [
     "Hola Emma, ¿cómo estás?",
