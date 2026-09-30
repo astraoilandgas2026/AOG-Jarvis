@@ -1,4 +1,49 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AOG Jarvis</title><link rel="stylesheet" href="./styles.css"></head>
-<body><main class="shell"><p class="eyebrow">ASTRA OIL & GAS</p><h1>Jarvis</h1><p>Procurement Intelligence Assistant · Read-only milestone</p><section><label for="query">Search supplier</label><div><input id="query" type="search" placeholder="Supplier, legal name, CNPJ"><button id="search" type="button">Search</button></div><pre id="result">No query executed.</pre></section></main><script type="module" src="./app.js"></script></body></html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AOG Jarvis</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="header">
+      <div>
+        <p class="eyebrow">ASTRA OIL & GAS</p>
+        <h1>Jarvis</h1>
+        <p class="subtitle">Procurement Intelligence Assistant</p>
+      </div>
+      <button id="logout" class="secondary hidden" type="button">Cerrar sesión</button>
+    </header>
+
+    <section id="auth-panel" class="card">
+      <h2>Acceso</h2>
+      <p>Jarvis requiere una sesión autenticada. No hay acceso anónimo a las herramientas de procurement.</p>
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="email" placeholder="tu@email.com">
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password" placeholder="••••••••">
+      <div class="actions">
+        <button id="login" type="button">Entrar</button>
+        <button id="signup" class="secondary" type="button">Crear cuenta</button>
+      </div>
+      <p id="auth-status" class="status"></p>
+    </section>
+
+    <section id="jarvis-panel" class="card hidden">
+      <div class="session">
+        <span id="session-user"></span>
+        <span class="badge">READ-ONLY</span>
+      </div>
+      <label for="query">Search supplier</label>
+      <div class="search-row">
+        <input id="query" type="search" placeholder="Olam, Renovar, FL Óleos, CNPJ...">
+        <button id="search" type="button">Buscar</button>
+      </div>
+      <pre id="result">Sesión activa. Escribe un proveedor para comenzar.</pre>
+    </section>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
