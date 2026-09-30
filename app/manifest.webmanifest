@@ -2,8 +2,10 @@
   "name":"AOG Jarvis",
   "short_name":"Jarvis",
   "start_url":"./",
+  "scope":"./",
   "display":"standalone",
   "background_color":"#050608",
   "theme_color":"#050608",
-  "description":"AOG Jarvis command center"
+  "description":"AOG Jarvis command center",
+  "icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
 }
