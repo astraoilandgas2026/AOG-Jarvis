@@ -1,104 +1,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 import { CONFIG } from "./config.js";
-
-const supabase = createClient(CONFIG.supabaseUrl, CONFIG.supabasePublishableKey);
-
-const authPanel = document.querySelector("#auth-panel");
-const jarvisPanel = document.querySelector("#jarvis-panel");
-const logoutButton = document.querySelector("#logout");
-const emailInput = document.querySelector("#email");
-const passwordInput = document.querySelector("#password");
-const authStatus = document.querySelector("#auth-status");
-const sessionUser = document.querySelector("#session-user");
-const result = document.querySelector("#result");
-const input = document.querySelector("#query");
-const searchButton = document.querySelector("#search");
-
-function setAuthStatus(message = "") {
-  authStatus.textContent = message;
-}
-
-function renderSession(session) {
-  const user = session?.user ?? null;
-  const signedIn = Boolean(user);
-
-  authPanel.classList.toggle("hidden", signedIn);
-  jarvisPanel.classList.toggle("hidden", !signedIn);
-  logoutButton.classList.toggle("hidden", !signedIn);
-
-  if (signedIn) {
-    sessionUser.textContent = user.email ?? user.id;
-    result.textContent = "Sesión activa. Escribe un proveedor para comenzar.";
-  }
-}
-
-async function login() {
-  setAuthStatus("Autenticando...");
-  const { error } = await supabase.auth.signInWithPassword({
-    email: emailInput.value.trim(),
-    password: passwordInput.value
-  });
-
-  if (error) {
-    setAuthStatus(error.message);
-    return;
-  }
-
-  setAuthStatus("");
-}
-
-async function signup() {
-  setAuthStatus("Creando cuenta...");
-  const { error } = await supabase.auth.signUp({
-    email: emailInput.value.trim(),
-    password: passwordInput.value
-  });
-
-  if (error) {
-    setAuthStatus(error.message);
-    return;
-  }
-
-  setAuthStatus("Cuenta creada. Si Supabase exige confirmación de email, revisa tu correo antes de entrar.");
-}
-
-async function searchSupplier() {
-  const q = input.value.trim();
-  if (q.length < 2) {
-    result.textContent = "Escribe al menos 2 caracteres.";
-    return;
-  }
-
-  searchButton.disabled = true;
-  result.textContent = "Consultando tool layer...";
-
-  const { data, error } = await supabase.functions.invoke(CONFIG.functionName, {
-    body: { q, limit: 10 }
-  });
-
-  searchButton.disabled = false;
-
-  if (error) {
-    result.textContent = `Error: ${error.message}`;
-    return;
-  }
-
-  result.textContent = JSON.stringify(data, null, 2);
-}
-
-document.querySelector("#login").addEventListener("click", login);
-document.querySelector("#signup").addEventListener("click", signup);
-logoutButton.addEventListener("click", async () => {
-  await supabase.auth.signOut();
-});
-searchButton.addEventListener("click", searchSupplier);
-input.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") searchSupplier();
-});
-
-supabase.auth.onAuthStateChange((_event, session) => {
-  renderSession(session);
-});
-
-const { data: { session } } = await supabase.auth.getSession();
-renderSession(session);
+import { createOrb } from "./modules/orb.js";
+import { createVoice } from "./modules/voice.js";
+import { detectModule, getModules } from "./modules/router.js";
+const supabase=createClient(CONFIG.supabaseUrl,CONFIG.supabasePublishableKey),$=s=>document.querySelector(s);
+const authPanel=$("#auth-panel"),workspace=$("#workspace"),logout=$("#logout"),status=$("#auth-status"),connection=$("#connection"),command=$("#command"),result=$("#result"),transcript=$("#transcript"),moduleTitle=$("#module-title"),moduleContent=$("#module-content"),modulesNav=$("#modules");
+const orb=createOrb({root:$("#orb"),status:$("#orb-status"),onActivate:()=>voice.start()});const modules=getModules();let activeModule="astra";
+function renderModules(){modulesNav.innerHTML="";Object.entries(modules).forEach(([key,m])=>{const b=document.createElement("button");b.textContent=m.label;b.dataset.module=key;b.className=key===activeModule?"active":"";b.onclick=()=>selectModule(key);modulesNav.appendChild(b)})}
+function selectModule(key){activeModule=key;moduleTitle.textContent=modules[key].label;moduleContent.innerHTML="<p class='module-description'>"+modules[key].description+"</p>";modulesNav.querySelectorAll("button").forEach(b=>b.classList.toggle("active",b.dataset.module===key))}
+function renderSession(session){const signed=Boolean(session?.user);authPanel.classList.toggle("hidden",signed);workspace.classList.toggle("hidden",!signed);logout.classList.toggle("hidden",!signed);connection.textContent=signed?"ONLINE":"OFFLINE";connection.classList.toggle("online",signed);if(signed){$("#command-line").textContent="Núcleo conectado. ¿Qué hacemos?";selectModule(activeModule)}}
+async function login(){status.textContent="Autenticando...";const{error}=await supabase.auth.signInWithPassword({email:$("#email").value.trim(),password:$("#password").value});status.textContent=error?error.message:""}
+async function signup(){status.textContent="Creando cuenta...";const{error}=await supabase.auth.signUp({email:$("#email").value.trim(),password:$("#password").value});status.textContent=error?error.message:"Cuenta creada. Revisa tu correo si la confirmación está habilitada."}
+async function execute(text){const q=text.trim();if(!q)return;transcript.textContent="› "+q;const target=detectModule(q);selectModule(target);if(target!=="astra"){result.textContent="Módulo detectado: "+modules[target].label+"\n\nArquitectura preparada. Las herramientas se activarán progresivamente.";return}orb.setState("thinking");result.textContent="Consultando tool layer...";try{const{data,error}=await supabase.functions.invoke(CONFIG.functionName,{body:{q,limit:10}});if(error)throw error;result.textContent=JSON.stringify(data,null,2)}catch(e){result.textContent="Error: "+e.message}finally{orb.setState("idle")}}
+const voice=createVoice({orb,onTranscript:t=>{command.value=t;execute(t)},onError:e=>{transcript.textContent="Voice: "+e}});
+$("#login").onclick=login;$("#signup").onclick=signup;logout.onclick=()=>supabase.auth.signOut();$("#execute").onclick=()=>execute(command.value);command.onkeydown=e=>{if(e.key==="Enter")execute(command.value)};supabase.auth.onAuthStateChange((_event,session)=>renderSession(session));
+const{data:{session}}=await supabase.auth.getSession();renderModules();selectModule(activeModule);renderSession(session);if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});
