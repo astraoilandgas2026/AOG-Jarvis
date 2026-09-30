@@ -20,7 +20,7 @@ async function addArtifactMessage(artifact){const {renderArtifact}=await import(
 function renderSession(session){const signed=Boolean(session?.user);home.classList.remove("hidden");chat.classList.remove("hidden");logout.classList.toggle("hidden",!signed);home.classList.toggle("compact",!signed);if(signed)setStatus("EMMA LISTA");else setStatus("EMMA LISTA · MODO BÁSICO")}
 async function ensureAuth(){const {data,error:sessionError}=await supabase.auth.getSession();if(sessionError)throw new Error("AUTH_SESSION: "+sessionError.message);if(data?.session?.access_token)return data.session;setStatus("CONECTANDO EMMA");const {data:anon,error}=await supabase.auth.signInAnonymously();if(error||!anon?.session)throw new Error("AUTH_ANON: "+(error?.message||"No se pudo autenticar la sesión anónima."));renderSession(anon.session);return anon.session}
 async function invoke(name,body){await ensureAuth();const {data,error}=await supabase.functions.invoke(name,{body});if(!error)return data;let detail="";try{if(error.context){const response=error.context instanceof Response?error.context:null;if(response){const clone=response.clone();try{const payload=await clone.json();detail=payload?.error||payload?.message||JSON.stringify(payload)}catch{detail=await response.text()}}}}catch{}throw new Error((detail||error.message||"Edge Function error").slice(0,800))}
-async function invokeContext(q){return await invokeTool("astra.context",{q,limit:8})}
+async async function invokeContext(q){return await invokeTool("astra.context",{q,limit:8})}
 async function invokeChat(q,context=null){
   await ensureAuth();
   const session=(await supabase.auth.getSession()).data.session;
