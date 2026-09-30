@@ -25,7 +25,8 @@ test("Emma browser E2E 30 operational cycles", async ({ page }) => {
     await page.locator("#execute").click();
 
     await expect.poll(async () => await assistants.count(), { timeout: 10000 }).toBeGreaterThan(before);
-    const last = assistants.last();
+    const after = await assistants.count();
+    const last = assistants.nth(after - 1);
     await expect(last).toBeVisible();
     await expect.poll(async () => ((await last.textContent()) || "").trim(), { timeout: 10000 }).not.toBe("");
 
