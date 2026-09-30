@@ -1,4 +1,8 @@
 export const TOOL_REGISTRY=Object.freeze({
+ "astra.context":{id:"astra.context",label:"Contexto Astra global",module:"astra",permission:"read",functionName:"jarvis-tool",description:"Busca y cruza inteligencia Astra en una sola consulta."},
+ "memory.write":{id:"memory.write",label:"Guardar memoria",module:"memory",permission:"write",functionName:"jarvis-tool",description:"Guarda memoria explícita del usuario."},
+ "personal.task.create":{id:"personal.task.create",label:"Crear tarea",module:"personal",permission:"write",functionName:"jarvis-tool",description:"Crea un pendiente o recordatorio persistente."},
+ "personal.task.list":{id:"personal.task.list",label:"Listar tareas",module:"personal",permission:"read",functionName:"jarvis-tool",description:"Consulta pendientes persistentes."},
  "conversation.chat":{id:"conversation.chat",label:"Conversación IA",module:"conversation",permission:"read",functionName:"jarvis-chat",description:"Núcleo conversacional server-side."},
  "ai.research":{id:"ai.research",label:"Investigación web",module:"ai",permission:"read",functionName:null,description:"Investiga fuentes externas y comunica evidencia y límites."},
  "ai.code":{id:"ai.code",label:"Código",module:"ai",permission:"write",functionName:null,description:"Genera, revisa y transforma código; puede preparar archivos para GitHub con confirmación."},
