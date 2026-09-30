@@ -29,7 +29,7 @@ jobs:
       - name: Run Emma 30x browser verification
         id: e2e
         env:
-          EMMA_TEST_URL: http://127.0.0.1:5500/?e2e=1
+          EMMA_TEST_URL: http://localhost:5500/?e2e=1
         run: npx playwright test tests/emma-e2e.spec.js --reporter=line 2>&1 | tee e2e.log
       - name: Report result to issue
         if: always() && github.event_name == 'issues'
