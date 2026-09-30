@@ -19,7 +19,10 @@ export const TOOL_REGISTRY=Object.freeze({
  "github.read":{id:"github.read",label:"GitHub",module:"github",permission:"read",functionName:"jarvis-github-read",description:"Lectura autenticada de repositorios públicos; OAuth/token para privados se añadirá después."},
  "mail.read":{id:"mail.read",label:"Correo Astra · Hostinger",module:"personal",permission:"read",functionName:"jarvis-mail",description:"Lee la bandeja del buzón Astra en Hostinger."},
  "mail.send":{id:"mail.send",label:"Enviar correo Astra",module:"personal",permission:"write",functionName:"jarvis-mail",description:"Envía correo desde el buzón Astra; requiere confirmación explícita."},
- "gmail.read":{id:"gmail.read",label:"Gmail",module:"gmail",permission:"read",functionName:null,description:"Conector preparado; OAuth pendiente."},
+ "gmail.read":{id:"gmail.read",label:"Gmail",module:"gmail",permission:"read",functionName:null,description:"Lee Gmail mediante el puente autorizado de Google Apps Script."},
+ "gmail.send":{id:"gmail.send",label:"Enviar Gmail",module:"gmail",permission:"write",functionName:null,description:"Envía Gmail mediante el puente autorizado; requiere confirmación explícita."},
+ "calendar.read":{id:"calendar.read",label:"Google Calendar",module:"calendar",permission:"read",functionName:null,description:"Consulta Google Calendar mediante el puente autorizado."},
+ "calendar.create":{id:"calendar.create",label:"Crear evento Calendar",module:"calendar",permission:"write",functionName:null,description:"Crea eventos en Google Calendar; requiere confirmación explícita."},
  "files.read":{id:"files.read",label:"Archivos",module:"files",permission:"read",functionName:null,description:"Conector preparado."}
 });
 export function getTool(id){return TOOL_REGISTRY[id]||null}
