@@ -1,6 +1,10 @@
 import { test, expect } from "@playwright/test";
 
 test("Emma browser E2E 30 operational cycles", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror",e=>errors.push("PAGEERROR: "+e.message));
+  page.on("console",m=>{if(m.type()==="error")errors.push("CONSOLE: "+m.text())});
+  page.on("requestfailed",r=>errors.push("REQUESTFAILED: "+r.url()+" :: "+(r.failure()?.errorText||"")));
   await page.goto(process.env.EMMA_TEST_URL || "https://astraoilandgas2026.github.io/AOG-Jarvis/?e2e=1", { waitUntil: "networkidle", timeout: 60000 });
   await expect(page.locator("#command")).toBeVisible({ timeout: 30000 });
 
@@ -24,7 +28,7 @@ test("Emma browser E2E 30 operational cycles", async ({ page }) => {
     await page.locator("#command").fill(message);
     await page.locator("#execute").click();
 
-    await expect.poll(async () => (await assistants.allTextContents()).slice(before).some(t => t.trim().length > 0), { timeout: 15000 }).toBe(true);
+    await page.waitForTimeout(5000); if(!(await assistants.allTextContents()).slice(before).some(t=>t.trim().length>0)) throw new Error("NO_ASSISTANT\n"+errors.join("\n"));
     const texts = (await assistants.allTextContents()).slice(before).map(t => t.trim()).filter(Boolean);
     const text = texts[texts.length - 1] || "";
     const elapsed = Date.now() - started;

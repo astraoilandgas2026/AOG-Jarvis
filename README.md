@@ -30,3 +30,9 @@ Supabase project: dhswxxathvzzlybxukat
 AOG-Procurement-os is a separate repository and must not be modified by this project.
 
 E2E browser verification is executed by GitHub Actions with Playwright.
+
+<!-- unified chat E2E -->
+
+<!-- chat provider rollback verification -->
+
+<!-- CORS 127.0.0.1 fix verification -->
