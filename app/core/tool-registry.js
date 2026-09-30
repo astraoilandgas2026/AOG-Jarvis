@@ -9,7 +9,7 @@ export const TOOL_REGISTRY=Object.freeze({
  "astra.timeline":{id:"astra.timeline",label:"Timeline",module:"astra",permission:"read",functionName:"jarvis-tool",description:"Consulta historial."},
  "astra.followups":{id:"astra.followups",label:"Follow-ups",module:"astra",permission:"read",functionName:"jarvis-tool",description:"Consulta próximas acciones."},
  "astra.write":{id:"astra.write",label:"Escritura Astra",module:"astra",permission:"write",functionName:null,description:"Deshabilitado hasta confirmar permisos y audit trail."},
- "github.read":{id:"github.read",label:"GitHub",module:"github",permission:"read",functionName:null,description:"Conector preparado; autenticación pendiente."},
+ "github.read":{id:"github.read",label:"GitHub",module:"github",permission:"read",functionName:"jarvis-github-read",description:"Lectura autenticada de repositorios públicos; OAuth/token para privados se añadirá después."},
  "gmail.read":{id:"gmail.read",label:"Gmail",module:"gmail",permission:"read",functionName:null,description:"Conector preparado; OAuth pendiente."},
  "files.read":{id:"files.read",label:"Archivos",module:"files",permission:"read",functionName:null,description:"Conector preparado."}
 });
