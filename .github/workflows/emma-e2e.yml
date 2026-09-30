@@ -3,6 +3,8 @@ name: Emma E2E 23x
 on:
   push:
     branches: [main]
+  pull_request:
+    types: [opened]
   issues:
     types: [opened]
   workflow_dispatch:
