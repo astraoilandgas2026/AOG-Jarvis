@@ -12,12 +12,15 @@ const PROVIDERS=[
 
 function providerError(status:number,message:string){const e=new Error(message);(e as any).status=status;return e;}
 
-async function callGroq(apiKey:string,messages:Message[]){
+async function callGroq(apiKey:string,messages:Message[],onChunk?:(text:string)=>void){
   const started=Date.now();
-  const response=await fetch("https://api.groq.com/openai/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({model:"openai/gpt-oss-20b",messages,temperature:0.2,max_tokens:700})});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw providerError(response.status,data?.error?.message??"Groq request failed");
-  return {text:data?.choices?.[0]?.message?.content??"",latency:Date.now()-started};
+  const response=await fetch("https://api.groq.com/openai/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({model:"openai/gpt-oss-20b",messages,temperature:0.2,max_tokens:700,stream:Boolean(onChunk)})});
+  if(!response.ok){const data=await response.json().catch(()=>({}));throw providerError(response.status,data?.error?.message??"Groq request failed")}
+  if(!onChunk){const data=await response.json();return {text:data?.choices?.[0]?.message?.content??"",latency:Date.now()-started}}
+  const reader=response.body?.getReader();if(!reader)throw providerError(502,"Groq stream unavailable");
+  const decoder=new TextDecoder();let buffer="",text="";
+  for(;;){const {value,done}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});const lines=buffer.split("\n");buffer=lines.pop()||"";for(const line of lines){if(!line.startsWith("data:"))continue;const payload=line.slice(5).trim();if(!payload||payload==="[DONE]")continue;try{const json=JSON.parse(payload);const delta=json?.choices?.[0]?.delta?.content||"";if(delta){text+=delta;onChunk(delta)}}catch{}}}
+  return {text,latency:Date.now()-started};
 }
 
 async function callGemini(apiKey:string,messages:Message[]){
@@ -31,6 +34,7 @@ async function callGemini(apiKey:string,messages:Message[]){
   return {text,latency:Date.now()-started};
 }
 
+async function saveMemory(db:any,userId:string,message:string){const remember=/\b(recuerda|acuérdate|acuerdate|de ahora en adelante|siempre|nunca|no vuelvas|prefiero|quiero que|me gusta|llámame|llamame)\b/i.test(message);if(!remember)return;await db.from("jarvis_memory").insert({user_id:userId,domain:"personal",memory_type:"preference",content:message.slice(0,1200),importance:5,source:"conversation",evidence_level:"user_stated",active:true})}
 async function logProvider(db:any,userId:string,provider:string,model:string,status:string,errorCode:string|null,latency:number|null){
   await db.from("jarvis_provider_events").insert({user_id:userId,provider,model,status,error_code:errorCode,latency_ms:latency});
 }
@@ -50,7 +54,7 @@ Deno.serve(async(req:Request)=>{
   if(!message)return new Response(JSON.stringify({error:"Message required"}),{status:400,headers:{...headers,"Content-Type":"application/json"}});
   const history=(Array.isArray(body.history)?body.history:[]).filter(x=>x&&typeof x.content==="string"&&(x.role==="user"||x.role==="assistant")).slice(-10);
   let memories="";
-  const {data:memoryRows}=await db.from("jarvis_memory").select("domain,memory_type,content,importance,evidence_level").eq("active",true).order("importance",{ascending:false}).limit(12);
+  const {data:memoryRows}=await db.from("jarvis_memory").select("domain,memory_type,content,importance,evidence_level").eq("user_id",userData.user.id).eq("active",true).order("importance",{ascending:false}).limit(12);
   if(memoryRows?.length)memories=memoryRows.map((m:any)=>`[${m.domain}/${m.memory_type}/${m.evidence_level??"unclassified"}] ${m.content}`).join("\n");
   const system=`Eres Jarvis de Astra Oil & Gas. Responde en español, directo, útil y estratégico. No inventes datos. Procurement OS es la fuente de verdad para proveedores y operaciones Astra. Si una pregunta requiere datos del Procurement OS, usa una herramienta de Astra o indica que falta acceso; nunca rellenes con suposiciones.
 
@@ -67,7 +71,7 @@ ${memories||"(sin memoria dinámica registrada)"}
     try{
       const result=provider.id==="groq"?await callGroq(apiKey,messages):await callGemini(apiKey,messages);
       if(!result.text)throw providerError(502,"Empty provider response");
-      await logProvider(db,userData.user.id,provider.id,provider.model,"success",null,result.latency);
+      await saveMemory(db,userData.user.id,message);await logProvider(db,userData.user.id,provider.id,provider.model,"success",null,result.latency);
       return new Response(JSON.stringify({ok:true,user_id:userData.user.id,provider:provider.id,model:provider.model,failover:failures.length>0,text:result.text}),{status:200,headers:{...headers,"Content-Type":"application/json"}});
     }catch(error){
       const status=(error as any)?.status??502;
