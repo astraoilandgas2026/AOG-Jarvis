@@ -1,5 +1,12 @@
 export const TOOL_REGISTRY=Object.freeze({
  "conversation.chat":{id:"conversation.chat",label:"Conversación IA",module:"conversation",permission:"read",functionName:"jarvis-chat",description:"Núcleo conversacional server-side."},
+ "ai.research":{id:"ai.research",label:"Investigación web",module:"ai",permission:"read",functionName:null,description:"Investiga fuentes externas y comunica evidencia y límites."},
+ "ai.code":{id:"ai.code",label:"Código",module:"ai",permission:"write",functionName:null,description:"Genera, revisa y transforma código; puede preparar archivos para GitHub con confirmación."},
+ "ai.vision":{id:"ai.vision",label:"Visión",module:"ai",permission:"read",functionName:null,description:"Analiza imágenes, PDFs y otros documentos visuales cuando el proveedor lo soporte."},
+ "ai.image":{id:"ai.image",label:"Generación de imágenes",module:"ai",permission:"write",functionName:null,description:"Genera o edita imágenes cuando exista un proveedor/modelo disponible; informa límites."},
+ "ai.video":{id:"ai.video",label:"Generación de video",module:"ai",permission:"write",functionName:null,description:"Genera video cuando exista un proveedor/modelo disponible; informa límites y costos."},
+ "ai.music":{id:"ai.music",label:"Generación de música/audio",module:"ai",permission:"write",functionName:null,description:"Genera música/audio cuando exista un proveedor/modelo disponible; informa límites y costos."},
+ "documents.generate":{id:"documents.generate",label:"Generar documentos",module:"documents",permission:"write",functionName:null,description:"Construye DOCX/PDF/PPTX a partir de contenido estructurado y evidencia."},
  "astra.search_supplier":{id:"astra.search_supplier",label:"Buscar proveedor",module:"astra",permission:"read",functionName:"jarvis-tool",description:"Busca proveedores reales."},
  "astra.dd":{id:"astra.dd",label:"Due diligence",module:"astra",permission:"read",functionName:"jarvis-tool",description:"Consulta DD real."},
  "astra.offers":{id:"astra.offers",label:"Ofertas comerciales",module:"astra",permission:"read",functionName:"jarvis-tool",description:"Consulta ofertas reales."},
