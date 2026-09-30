@@ -6,7 +6,7 @@ function cors(req:Request){const origin=req.headers.get("Origin")??"";return {"A
 type Message={role:"user"|"assistant"|"system";content:string};
 
 const PROVIDERS=[
-  {id:"groq",model:"llama-3.3-70b-versatile",key:"GROQ_API_KEY"},
+  {id:"groq",model:"openai/gpt-oss-20b",key:"GROQ_API_KEY"},
   {id:"gemini",model:"gemini-3.8-flash",key:"GEMINI_API_KEY"}
 ];
 
@@ -14,7 +14,7 @@ function providerError(status:number,message:string){const e=new Error(message);
 
 async function callGroq(apiKey:string,messages:Message[]){
   const started=Date.now();
-  const response=await fetch("https://api.groq.com/openai/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({model:"llama-3.3-70b-versatile",messages,temperature:0.2,max_tokens:700})});
+  const response=await fetch("https://api.groq.com/openai/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({model:"openai/gpt-oss-20b",messages,temperature:0.2,max_tokens:700})});
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw providerError(response.status,data?.error?.message??"Groq request failed");
   return {text:data?.choices?.[0]?.message?.content??"",latency:Date.now()-started};
