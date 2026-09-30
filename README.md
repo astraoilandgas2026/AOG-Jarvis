@@ -32,3 +32,5 @@ AOG-Procurement-os is a separate repository and must not be modified by this pro
 E2E browser verification is executed by GitHub Actions with Playwright.
 
 <!-- unified chat E2E -->
+
+<!-- chat provider rollback verification -->
