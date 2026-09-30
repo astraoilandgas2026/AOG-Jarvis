@@ -1,0 +1,2 @@
+[functions.jarvis-search-supplier]
+verify_jwt = true
