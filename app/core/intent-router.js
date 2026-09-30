@@ -4,8 +4,10 @@ export function classifyIntent(text=""){
  if(/dd|due diligence|diligencia|riesgo/.test(q))return{type:"tool",module:"astra",tool:"astra.dd"};
  if(/oferta|precio|commercial|incoterm|fob|cif|cfr/.test(q))return{type:"tool",module:"astra",tool:"astra.offers"};
  if(/^(?:emma[,:]?\s*)?(?:crea|genera|hazme|prepara)\b.*\b(documento|documentos|word|docx|pdf|powerpoint|pptx|company profile)\b/i.test(text))return{type:"action",module:"documents",task:"generate_document"};
+ if(/(?:revisa|revisar|lee|leer|mis correos|bandeja|inbox|últimos correos|ultimos correos|correo recibido|gmail|hostinger)/.test(q))return{type:"tool",module:"personal",tool:"mail.read"};
+ if(/(?:envía|envia|manda|mandar)\s+(?:un\s+)?(?:correo|email|mail)/.test(q))return{type:"action",module:"personal",tool:"mail.send",requiresConfirmation:true};
  if(/documento|documentos|coa|sgs|iscc|tds|sds|ficha/.test(q))return{type:"tool",module:"astra",tool:"astra.documents"};
- if(/contacto|contactos|email|correo|whatsapp|teléfono|telefono/.test(q))return{type:"tool",module:"astra",tool:"astra.contacts"};
+ if(/contacto|contactos|whatsapp|teléfono|telefono/.test(q))return{type:"tool",module:"astra",tool:"astra.contacts"};
  if(/producto|productos|feedstock|uco|av[uú]/.test(q))return{type:"tool",module:"astra",tool:"astra.products"};
  if(/timeline|historial|último contacto|ultimo contacto/.test(q))return{type:"tool",module:"astra",tool:"astra.timeline"};
  if(/follow.?up|seguimiento|pendiente|próxima acción|proxima accion/.test(q))return{type:"tool",module:"astra",tool:"astra.followups"};
