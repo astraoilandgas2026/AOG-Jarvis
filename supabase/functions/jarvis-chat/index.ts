@@ -46,9 +46,14 @@ Deno.serve(async(req:Request)=>{
   const authorization=req.headers.get("Authorization");
   if(!authorization?.startsWith("Bearer "))return new Response(JSON.stringify({error:"Authentication required"}),{status:401,headers:{...headers,"Content-Type":"application/json"}});
   const db=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_ANON_KEY")!,{global:{headers:{Authorization:authorization}}});
-  const {data:claimsData,error:claimsError}=await db.auth.getClaims(authorization.replace(/^Bearer\\s+/,""));
-  const userId=claimsData?.claims?.sub;
-  if(claimsError||!userId)return new Response(JSON.stringify({error:"Invalid authentication"}),{status:401,headers:{...headers,"Content-Type":"application/json"}});
+  // Supabase gateway already validates the JWT (verify_jwt=true). Read the verified subject locally to avoid a second Auth round-trip.
+  let userId="";
+  try{
+    const token=authorization.slice(7);
+    const payload=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0))));
+    userId=typeof payload?.sub==="string"?payload.sub:"";
+  }catch{}
+  if(!userId)return new Response(JSON.stringify({error:"Invalid authentication"}),{status:401,headers:{...headers,"Content-Type":"application/json"}});
   let body:{message?:string;history?:Array<{role:"user"|"assistant";content:string}>};
   try{body=await req.json()}catch{return new Response(JSON.stringify({error:"Invalid JSON body"}),{status:400,headers:{...headers,"Content-Type":"application/json"}})}
   const message=typeof body.message==="string"?body.message.trim():"";
