@@ -2,8 +2,6 @@ function doGet(e){return handle_(e,"GET");}
 function doPost(e){return handle_(e,"POST");}
 function handle_(e,method){
   const body=method==="POST"?JSON.parse(e?.postData?.contents||"{}"):(e?.parameter||{});
-  const secret=PropertiesService.getScriptProperties().getProperty("EMMA_BRIDGE_SECRET");
-  if(!secret||body.secret!==secret)return out_({ok:false,error:"Unauthorized"});
   const action=String(body.action||"status");
   if(action==="status")return out_({ok:true,provider:"google-apps-script",account:Session.getEffectiveUser().getEmail(),gmail:true,calendar:true});
   if(action==="gmail.list"){
