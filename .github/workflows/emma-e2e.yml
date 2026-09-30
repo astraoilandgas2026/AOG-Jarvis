@@ -1,0 +1,20 @@
+name: Emma E2E 23x
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Wait for GitHub Pages
+        run: sleep 45
+      - name: Install Playwright
+        run: npx playwright@1.55.0 install --with-deps chromium
+      - name: Run Emma 23x browser verification
+        run: npx playwright@1.55.0 test tests/emma-e2e.spec.js --reporter=line
