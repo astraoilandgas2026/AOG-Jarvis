@@ -78,8 +78,8 @@ ${memories||"(sin memoria dinámica registrada)"}
         const stream=new ReadableStream({
           async start(controller){
             try{
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"start"})}\\n\\n`));
-              const result=await callGroq(apiKey,messages,(chunk)=>controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"delta",text:chunk})}\\n\\n`)));
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"start"})}\n\n`));
+              const result=await callGroq(apiKey,messages,(chunk)=>controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"delta",text:chunk})}\n\n`)));
               if(!result.text)throw providerError(502,"Empty provider response");
               if(needsMemory)await saveMemory(db,userId,message);
               await logProvider(db,userId,provider.id,provider.model,"success",null,result.latency);
@@ -87,7 +87,7 @@ ${memories||"(sin memoria dinámica registrada)"}
             }catch(error){
               const status=(error as any)?.status??502;
               await logProvider(db,userId,provider.id,provider.model,"failed",String(status),null,null);
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"error",message:error instanceof Error?error.message:"Provider error"})}\\n\\n`));controller.close();
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"error",message:error instanceof Error?error.message:"Provider error"})}\n\n`));controller.close();
             }
           }
         });
