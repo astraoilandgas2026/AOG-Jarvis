@@ -30,7 +30,9 @@ jobs:
         id: e2e
         env:
           EMMA_TEST_URL: http://localhost:5500/?e2e=1
-        run: npx playwright test tests/emma-e2e.spec.js --reporter=line 2>&1 | tee e2e.log
+        run: |
+          set -o pipefail
+          npx playwright test tests/emma-e2e.spec.js --reporter=line 2>&1 | tee e2e.log
       - name: Report result to issue
         if: always() && github.event_name == 'issues'
         env:
