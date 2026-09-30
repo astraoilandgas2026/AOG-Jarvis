@@ -5,11 +5,34 @@ const allowedOrigins=new Set(["https://astraoilandgas2026.github.io","http://loc
 function cors(req:Request){const origin=req.headers.get("Origin")??"";return {"Access-Control-Allow-Origin":allowedOrigins.has(origin)?origin:"null","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS","Vary":"Origin"};}
 type Message={role:"user"|"assistant"|"system";content:string};
 
+const PROVIDERS=[
+  {id:"groq",model:"llama-3.3-70b-versatile",key:"GROQ_API_KEY"},
+  {id:"gemini",model:"gemini-3.8-flash",key:"GEMINI_API_KEY"}
+];
+
+function providerError(status:number,message:string){const e=new Error(message);(e as any).status=status;return e;}
+
 async function callGroq(apiKey:string,messages:Message[]){
-  const response=await fetch("https://api.groq.com/openai/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({model:"llama-3.3-70b-versatile",messages,temperature:0.2,max_tokens:500})});
-  const data=await response.json();
-  if(!response.ok)throw new Error(data?.error?.message??"Groq request failed");
-  return data?.choices?.[0]?.message?.content??"";
+  const started=Date.now();
+  const response=await fetch("https://api.groq.com/openai/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({model:"llama-3.3-70b-versatile",messages,temperature:0.2,max_tokens:700})});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw providerError(response.status,data?.error?.message??"Groq request failed");
+  return {text:data?.choices?.[0]?.message?.content??"",latency:Date.now()-started};
+}
+
+async function callGemini(apiKey:string,messages:Message[]){
+  const started=Date.now();
+  const system=messages.find(m=>m.role==="system")?.content??"";
+  const contents=messages.filter(m=>m.role!=="system").map(m=>({role:m.role==="assistant"?"model":"user",parts:[{text:m.content}]}));
+  const response=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",{method:"POST",headers:{"x-goog-api-key":apiKey,"Content-Type":"application/json"},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig:{temperature:0.2,maxOutputTokens:700}})});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw providerError(response.status,data?.error?.message??"Gemini request failed");
+  const text=data?.candidates?.[0]?.content?.parts?.map((p:any)=>p.text??"").join("")??"";
+  return {text,latency:Date.now()-started};
+}
+
+async function logProvider(db:any,userId:string,provider:string,model:string,status:string,errorCode:string|null,latency:number|null){
+  await db.from("jarvis_provider_events").insert({user_id:userId,provider,model,status,error_code:errorCode,latency_ms:latency});
 }
 
 Deno.serve(async(req:Request)=>{
@@ -25,14 +48,32 @@ Deno.serve(async(req:Request)=>{
   try{body=await req.json()}catch{return new Response(JSON.stringify({error:"Invalid JSON body"}),{status:400,headers:{...headers,"Content-Type":"application/json"}})}
   const message=typeof body.message==="string"?body.message.trim():"";
   if(!message)return new Response(JSON.stringify({error:"Message required"}),{status:400,headers:{...headers,"Content-Type":"application/json"}});
-  const apiKey=Deno.env.get("GROQ_API_KEY");
-  if(!apiKey)return new Response(JSON.stringify({error:"AI provider not configured"}),{status:503,headers:{...headers,"Content-Type":"application/json"}});
   const history=(Array.isArray(body.history)?body.history:[]).filter(x=>x&&typeof x.content==="string"&&(x.role==="user"||x.role==="assistant")).slice(-10);
-  const messages:Message[]=[{role:"system",content:"Eres Jarvis de Astra Oil & Gas. Responde en español, directo y útil. No inventes datos. Si una pregunta requiere datos del Procurement OS, indica que debe usar una herramienta de Astra en lugar de suponer."},...history,{role:"user",content:message}];
-  try{
-    const text=await callGroq(apiKey,messages);
-    return new Response(JSON.stringify({ok:true,user_id:userData.user.id,provider:"groq",text}),{status:200,headers:{...headers,"Content-Type":"application/json"}});
-  }catch(error){
-    return new Response(JSON.stringify({error:"AI request failed",detail:error instanceof Error?error.message:"Unknown provider error"}),{status:502,headers:{...headers,"Content-Type":"application/json"}});
+  let memories="";
+  const {data:memoryRows}=await db.from("jarvis_memory").select("domain,memory_type,content,importance,evidence_level").eq("active",true).order("importance",{ascending:false}).limit(12);
+  if(memoryRows?.length)memories=memoryRows.map((m:any)=>`[${m.domain}/${m.memory_type}/${m.evidence_level??"unclassified"}] ${m.content}`).join("\n");
+  const system=`Eres Jarvis de Astra Oil & Gas. Responde en español, directo, útil y estratégico. No inventes datos. Procurement OS es la fuente de verdad para proveedores y operaciones Astra. Si una pregunta requiere datos del Procurement OS, usa una herramienta de Astra o indica que falta acceso; nunca rellenes con suposiciones.
+
+Core de Leonardo: convertir información en inteligencia verificada, estructura ejecutable y resultados recurrentes. Prioriza impacto, urgencia, riesgo, oportunidad, esfuerzo, costo y reversibilidad. Comunicación: corta, factual, ordenada, accionable. Puedes desafiar supuestos débiles y señalar riesgos sin dramatizar.
+
+Memoria relevante disponible:
+${memories||"(sin memoria dinámica registrada)"}
+`;
+  const messages:Message[]=[{role:"system",content:system},...history,{role:"user",content:message}];
+  const failures:any[]=[];
+  for(const provider of PROVIDERS){
+    const apiKey=Deno.env.get(provider.key);
+    if(!apiKey){failures.push({provider:provider.id,reason:"not_configured"});continue;}
+    try{
+      const result=provider.id==="groq"?await callGroq(apiKey,messages):await callGemini(apiKey,messages);
+      if(!result.text)throw providerError(502,"Empty provider response");
+      await logProvider(db,userData.user.id,provider.id,provider.model,"success",null,result.latency);
+      return new Response(JSON.stringify({ok:true,user_id:userData.user.id,provider:provider.id,model:provider.model,failover:failures.length>0,text:result.text}),{status:200,headers:{...headers,"Content-Type":"application/json"}});
+    }catch(error){
+      const status=(error as any)?.status??502;
+      failures.push({provider:provider.id,status,reason:error instanceof Error?error.message:"Unknown provider error"});
+      await logProvider(db,userData.user.id,provider.id,provider.model,"failed",String(status),null);
+    }
   }
+  return new Response(JSON.stringify({error:"All AI providers unavailable",failures}),{status:503,headers:{...headers,"Content-Type":"application/json"}});
 });
