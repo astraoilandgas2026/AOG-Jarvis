@@ -43,3 +43,5 @@ E2E browser verification is executed by GitHub Actions with Playwright.
 <!-- rerun after task status fix -->
 
 <!-- stable 30x locator -->
+
+<!-- final robust 30x suite -->
