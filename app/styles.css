@@ -1,1 +1,23 @@
-:root{font-family:system-ui,sans-serif;color:#171717;background:#f5f4f0}body{margin:0}.shell{width:min(900px,calc(100% - 32px));margin:64px auto}section{margin-top:32px;padding:24px;background:#fff;border:1px solid #ddd;border-radius:14px}input{padding:12px;width:60%;border:1px solid #bbb;border-radius:8px}button{padding:12px 18px;border:0;border-radius:8px}pre{min-height:100px;margin-top:20px;padding:16px;background:#f7f7f7;white-space:pre-wrap}
+:root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#171717;background:#f3f1eb}
+*{box-sizing:border-box}
+body{margin:0}
+.shell{width:min(920px,calc(100% - 32px));margin:48px auto 80px}
+.header{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
+.eyebrow{font-size:12px;letter-spacing:.16em;margin:0 0 8px;font-weight:700}
+h1{font-size:48px;line-height:1;margin:0}
+h2{margin-top:0}
+.subtitle{margin:10px 0 0;color:#666}
+.card{margin-top:28px;padding:24px;background:#fff;border:1px solid #d9d7d0;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.04)}
+label{display:block;font-size:13px;font-weight:650;margin:16px 0 7px}
+input{padding:12px 13px;width:100%;border:1px solid #bdbbb4;border-radius:9px;background:#fff;font:inherit}
+.search-row{display:flex;gap:10px}
+.search-row input{flex:1}
+button{padding:12px 18px;border:0;border-radius:9px;background:#171717;color:#fff;font:inherit;font-weight:650;cursor:pointer}
+button.secondary{background:#eceae3;color:#171717}
+.actions{display:flex;gap:10px;margin-top:18px}
+pre{min-height:140px;margin-top:20px;padding:16px;background:#f7f6f2;border:1px solid #e2e0d9;border-radius:10px;white-space:pre-wrap;overflow:auto}
+.status{min-height:20px;color:#8a2f2f}
+.session{display:flex;justify-content:space-between;align-items:center;gap:12px;color:#555;font-size:13px}
+.badge{display:inline-block;padding:5px 8px;border-radius:999px;background:#e9eee8;color:#315332;font-size:11px;font-weight:750;letter-spacing:.08em}
+.hidden{display:none!important}
+@media(max-width:650px){.header{display:block}.header .secondary{margin-top:16px}.search-row{display:block}.search-row button{width:100%;margin-top:10px}}
