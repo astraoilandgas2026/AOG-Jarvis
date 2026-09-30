@@ -75,8 +75,8 @@ async function invokeMail(action,body={}){const tool=getTool(action==="send"?"ma
 function parseSendEmail(q){const match=q.match(/(?:envía|envia|manda|mandar)\s+(?:un\s+)?(?:correo|email|mail)\s+(?:a|para)\s+([^\s]+)\s+(?:con\s+)?(?:asunto|subject)\s*[:=-]\s*(.+?)\s+(?:cuerpo|body|mensaje)\s*[:=-]\s*([\s\S]+)$/i);if(!match)return null;return{to:[match[1]],subject:match[2].trim(),text:match[3].trim()}}
 function formatMail(data){const rows=data?.data||[];if(!rows.length)return data?.mailbox?"No hay correos que coincidan en "+data.mailbox+".":"No encontré correos.";return rows.slice(0,10).map((m,i)=>`${i+1}. ${m.subject||"(sin asunto)"} — ${m.from?.address||"remitente desconocido"} — ${m.date?new Date(m.date).toLocaleString("es-CL"): ""} [UID ${m.uid}]`).join("\n")}
 function fastReply(q){
-  if(/^(hola|holi|hey|hello|buenas)([!.?,\\s]*(emma)?[!.?,\\s]*)?(cómo|como) (estás|estas)[?!.\\s]*$/i.test(q))return "Bien, Leíto. Aquí contigo. ¿Qué hacemos?";
-  if(/^(hola|holi|hey|hello|buenas)[!.?,\\s]*$/i.test(q))return "Hola, Leíto. Aquí estoy.";
+  if(/^(hola|holi|hey|hello|buenas)([!.?,\s]*(emma)?[!.?,\s]*)?(cómo|como) (estás|estas)[?!.\\s]*$/i.test(q))return "Bien, Leíto. Aquí contigo. ¿Qué hacemos?";
+  if(/^(hola|holi|hey|hello|buenas)[!.?,\s]*$/i.test(q))return "Hola, Leíto. Aquí estoy.";
   return null;
 }
 async function execute(text){const q=text.trim();if(!q)return;command.value="";addMessage("user",q);const quick=fastReply(q);if(quick){addMessage("assistant",quick);speak(quick);return}orb.setState("thinking");const intent=classifyIntent(q);const target=intent.module||detectModule(q);selectModule(target);try{
@@ -95,5 +95,5 @@ supabase.auth.onAuthStateChange((_event,session)=>renderSession(session));
 const {data:{session}}=await supabase.auth.getSession();
 renderModules();selectModule(activeModule);
 if(session)renderSession(session);else{setStatus("CONECTANDO EMMA");try{await ensureAuth()}catch(error){setStatus("CONFIGURACIÓN DE ACCESO PENDIENTE");console.error("Anonymous auth unavailable",error)}}
-if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=15").catch(()=>{});
+if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=16").catch(()=>{});
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;install.classList.remove("hidden")});install.onclick=async()=>{if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;install.classList.add("hidden")};
