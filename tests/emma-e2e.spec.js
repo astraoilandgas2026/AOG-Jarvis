@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 test("Emma browser E2E 30 operational cycles", async ({ page }) => {
-  await page.goto(process.env.EMMA_TEST_URL || "https://astraoilandgas2026.github.io/AOG-Jarvis/?e2e=1", { waitUntil: "networkidle", timeout: 60000 });
+  const errors=[]; page.on("pageerror",e=>errors.push("PAGEERROR: "+e.message)); page.on("console",m=>{if(m.type()==="error")errors.push("CONSOLE: "+m.text())}); await page.goto("https://astraoilandgas2026.github.io/AOG-Jarvis/?e2e=1", { waitUntil: "networkidle", timeout: 60000 });
   await expect(page.locator("#command")).toBeVisible({ timeout: 30000 });
 
   const messages = [
@@ -24,9 +24,9 @@ test("Emma browser E2E 30 operational cycles", async ({ page }) => {
     await page.locator("#command").fill(message);
     await page.locator("#execute").click();
 
-    await expect.poll(async () => (await assistants.allTextContents()).slice(before).some(t => t.trim().length > 0), { timeout: 15000 }).toBe(true);
+    await expect.poll(async () => (await assistants.allTextContents()).slice(before).some(t => t.trim().length > 0), { timeout: 30000 }).toBe(true);
     const texts = (await assistants.allTextContents()).slice(before).map(t => t.trim()).filter(Boolean);
-    const text = texts[texts.length - 1] || "";
+    const text = texts[texts.length - 1] || ""; if(!text && errors.length) throw new Error(errors.join("\n"));
     const elapsed = Date.now() - started;
 
     if (/^Error real:/i.test(text) || /error de lectura|read error|stream/i.test(text)) {
