@@ -9,7 +9,6 @@ import { normalizeSupplierQuery } from "./core/query-normalizer.js";
 const supabase=createClient(CONFIG.supabaseUrl,CONFIG.supabasePublishableKey);
 const $=s=>document.querySelector(s);
 const command=$("#command"),messages=$("#messages"),chat=$("#chat"),home=$("#home"),login=$("#login");
-const loginButton=$("#login-button"),email=$("#email"),loginStatus=$("#login-status");
 const workspace=$("#workspace"),logout=$("#logout"),install=$("#install"),result=$("#result"),moduleTitle=$("#module-title"),moduleContent=$("#module-content"),modulesNav=$("#modules");
 let voice=null;
 const orb=createOrb({root:$("#orb"),status:$("#orb-status"),onActivate:()=>voice?.start()});
@@ -24,9 +23,15 @@ function renderSession(session){const signed=Boolean(session?.user);login.classL
 async function invokeChat(q){const tool=getTool("conversation.chat");const{data,error}=await supabase.functions.invoke(tool.functionName,{body:{message:q,history}});if(error)throw error;const answer=data?.text?.trim()||"No recibí una respuesta del núcleo.";history.push({role:"user",content:q},{role:"assistant",content:answer});history=history.slice(-10);return answer}
 async function invokeTool(toolId,body={}){const tool=getTool(toolId);if(!tool?.functionName)throw new Error("Conector no configurado: "+toolId);const{data,error}=await supabase.functions.invoke(tool.functionName,{body:{tool:toolId,...body}});if(error)throw error;return data}
 async function execute(text){const q=text.trim();if(!q)return;command.value="";addMessage("user",q);orb.setState("thinking");const intent=classifyIntent(q);const target=intent.module||detectModule(q);selectModule(target);try{if(intent.type==="tool"&&intent.tool){const data=await invokeTool(intent.tool,{q:normalizeSupplierQuery(q),limit:10});const output=JSON.stringify(data,null,2);result.textContent=output;const reply=data?.count?"Encontré "+data.count+" resultado"+(data.count===1?"":"s")+".":"No encontré resultados.";addMessage("assistant",reply);speak(reply);return}const answer=await invokeChat(q);addMessage("assistant",answer);result.textContent=answer;speak(answer)}catch(e){result.textContent="Error: "+e.message;addMessage("assistant","No pude completar la solicitud: "+e.message);speak("No pude completar la solicitud.")}finally{if(orb.getState()==="thinking")orb.setState("idle")}}
-loginButton.onclick=async()=>{const value=email.value.trim();if(!value)return;loginStatus.textContent="Enviando enlace…";const{error}=await supabase.auth.signInWithOtp({email:value,options:{emailRedirectTo:window.location.href}});loginStatus.textContent=error?error.message:"Revisa tu correo y abre el enlace seguro."};
 logout.onclick=()=>supabase.auth.signOut();$("#execute").onclick=()=>execute(command.value);$("#voice").onclick=()=>voice?.start();command.addEventListener("keydown",e=>{if(e.key==="Enter")execute(command.value)});
-supabase.auth.onAuthStateChange((_event,session)=>renderSession(session));const{data:{session}}=await supabase.auth.getSession();
-renderModules();selectModule(activeModule);renderSession(session);
+supabase.auth.onAuthStateChange((_event,session)=>renderSession(session));
+const {data:{session}}=await supabase.auth.getSession();
+renderModules();selectModule(activeModule);
+if(session){renderSession(session);}else{
+  setStatus("CONECTANDO EMMA");
+  const {data,error}=await supabase.auth.signInAnonymously();
+  if(error){setStatus("CONFIGURACIÓN DE ACCESO PENDIENTE");console.error("Anonymous auth unavailable",error);}
+  else renderSession(data.session);
+}
 if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=8").catch(()=>{});
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;install.classList.remove("hidden")});install.onclick=async()=>{if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;install.classList.add("hidden")};
