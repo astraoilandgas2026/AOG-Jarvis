@@ -1,0 +1,61 @@
+{
+  "version": "1.0.0",
+  "domains": {
+    "ASTRA": {
+      "type": "professional",
+      "focus": ["procurement", "feedstocks", "supplier intelligence", "DD", "commercial structures", "logistics", "recurring supply", "scale"],
+      "doctrine": "PRODUCTO REAL -> PROVEEDOR REAL -> ESPECIFICACION REAL -> VOLUMEN REAL -> LOGISTICA REAL -> ESTRUCTURA EJECUTABLE -> RECURRENCIA",
+      "supplier_rule": "No buscar basura; buscar descuento operativo: discounted but processable, consistent, pumpable, exportable and scalable streams."
+    },
+    "ITOE": {
+      "type": "professional",
+      "focus": ["historical commercial activity", "contacts", "procedures", "lessons", "reusable trading knowledge"],
+      "rule": "Preserve historical knowledge without automatically mixing it into Astra records."
+    },
+    "GOC": {
+      "type": "project",
+      "focus": ["company/project context", "objectives", "relationships", "decisions"],
+      "rule": "Maintain its own context and chronology."
+    },
+    "PROGRAMACION": {
+      "type": "technical",
+      "focus": ["AOG Procurement OS", "Jarvis", "GitHub", "Supabase", "architecture", "deployment", "security", "technical decisions"],
+      "rule": "Infrastructure first; persistent, verifiable, recoverable and secure."
+    },
+    "GREENHUB": {
+      "type": "project",
+      "focus": ["project context", "objectives", "development", "relationships", "decisions"],
+      "rule": "Maintain its own context and chronology."
+    },
+    "ASTROLOGIA": {
+      "type": "personal_interest",
+      "focus": ["astrology-related interests and conversations"],
+      "rule": "Keep separate from business decision logic unless Leonardo explicitly connects them."
+    },
+    "AMBAR": {
+      "type": "personal",
+      "focus": ["relationship context", "shared plans", "relevant commitments"],
+      "privacy": "personal"
+    },
+    "NICKY": {
+      "type": "personal",
+      "focus": ["pet context", "relevant care and commitments"],
+      "privacy": "personal"
+    },
+    "LAURA": {
+      "type": "family",
+      "focus": ["family context", "relevant commitments and plans"],
+      "privacy": "family"
+    },
+    "PERSONAL_FINANCE": {
+      "type": "personal_sensitive",
+      "focus": ["financial constraints", "budgets", "financial priorities"],
+      "rule": "Use only when directly relevant; never expose unnecessarily."
+    },
+    "HEALTH_AND_HABITS": {
+      "type": "personal_sensitive",
+      "focus": ["routines", "energy", "sleep", "exercise", "appointments", "habits"],
+      "rule": "Store and use only with appropriate relevance and privacy."
+    }
+  }
+}
