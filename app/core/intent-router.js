@@ -1,6 +1,8 @@
 export function classifyIntent(text=""){
  const q=text.trim().toLowerCase();
  if(!q)return{type:"empty",module:"conversation"};
+ if(/(?:recuerda|acuérdate|acuerdate|anota|apunta|guarda|memoriza|no olvides)/.test(q))return{type:"memory_write",module:"memory"};
+ if(/(?:recuérdame|recuerdame|recordatorio|alarma|pon una alarma|agrega una tarea|añade una tarea|anota como pendiente|apunta como pendiente)/.test(q))return{type:"task_create",module:"automation"};
  if(/dd|due diligence|diligencia|riesgo/.test(q))return{type:"tool",module:"astra",tool:"astra.dd"};
  if(/oferta|precio|commercial|incoterm|fob|cif|cfr/.test(q))return{type:"tool",module:"astra",tool:"astra.offers"};
  if(/^(?:emma[,:]?\s*)?(?:crea|genera|hazme|prepara)\b.*\b(documento|documentos|word|docx|pdf|powerpoint|pptx|company profile)\b/i.test(text))return{type:"action",module:"documents",task:"generate_document"};
