@@ -1,4 +1,4 @@
-const CACHE="aog-jarvis-shell-v8";
+const CACHE="aog-jarvis-shell-v9";
 const ASSETS=["./","./index.html","./styles.css","./app.js","./config.js","./manifest.webmanifest","./icon.svg","./modules/orb.js","./modules/voice.js","./modules/router.js","./core/tool-registry.js","./core/intent-router.js","./core/ai-router.js","./core/query-normalizer.js","./modules/documents.js"];
 self.addEventListener("install",event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
