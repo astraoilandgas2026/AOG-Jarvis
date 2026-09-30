@@ -14,7 +14,7 @@ function providerError(status:number,message:string){const e=new Error(message);
 
 async function callGroq(apiKey:string,messages:Message[],onChunk?:(text:string)=>void){
   const started=Date.now();
-  const response=await fetch("https://api.groq.com/openai/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({model:"openai/gpt-oss-20b",messages,temperature:0.2,max_tokens:700,stream:Boolean(onChunk)})});
+  const response=await fetch("https://api.groq.com/openai/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({model:"openai/gpt-oss-20b",messages,temperature:0.2,max_tokens:256,stream:Boolean(onChunk)})});
   if(!response.ok){const data=await response.json().catch(()=>({}));throw providerError(response.status,data?.error?.message??"Groq request failed")}
   if(!onChunk){const data=await response.json();return {text:data?.choices?.[0]?.message?.content??"",latency:Date.now()-started}}
   const reader=response.body?.getReader();if(!reader)throw providerError(502,"Groq stream unavailable");
@@ -46,15 +46,19 @@ Deno.serve(async(req:Request)=>{
   const authorization=req.headers.get("Authorization");
   if(!authorization?.startsWith("Bearer "))return new Response(JSON.stringify({error:"Authentication required"}),{status:401,headers:{...headers,"Content-Type":"application/json"}});
   const db=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_ANON_KEY")!,{global:{headers:{Authorization:authorization}}});
-  const {data:userData,error:userError}=await db.auth.getUser();
-  if(userError||!userData.user)return new Response(JSON.stringify({error:"Invalid authentication"}),{status:401,headers:{...headers,"Content-Type":"application/json"}});
+  const {data:claimsData,error:claimsError}=await db.auth.getClaims(authorization.replace(/^Bearer\\s+/,""));
+  const userId=claimsData?.claims?.sub;
+  if(claimsError||!userId)return new Response(JSON.stringify({error:"Invalid authentication"}),{status:401,headers:{...headers,"Content-Type":"application/json"}});
   let body:{message?:string;history?:Array<{role:"user"|"assistant";content:string}>};
   try{body=await req.json()}catch{return new Response(JSON.stringify({error:"Invalid JSON body"}),{status:400,headers:{...headers,"Content-Type":"application/json"}})}
   const message=typeof body.message==="string"?body.message.trim():"";
   if(!message)return new Response(JSON.stringify({error:"Message required"}),{status:400,headers:{...headers,"Content-Type":"application/json"}});
-  const history=(Array.isArray(body.history)?body.history:[]).filter(x=>x&&typeof x.content==="string"&&(x.role==="user"||x.role==="assistant")).slice(-10);
+  const history=(Array.isArray(body.history)?body.history:[]).filter(x=>x&&typeof x.content==="string"&&(x.role==="user"||x.role==="assistant")).slice(-6);
   let memories="";
-  const {data:memoryRows}=await db.from("jarvis_memory").select("domain,memory_type,content,importance,evidence_level").eq("user_id",userData.user.id).eq("active",true).order("importance",{ascending:false}).limit(12);
+  const needsMemory=!/^(hola|holi|buenas|buenos días|buenas tardes|buenas noches|hey|hello|gracias|ok|okay|perfecto|listo)[!.?,\s]*$/i.test(message);
+  const {data:memoryRows}=needsMemory
+    ?await db.from("jarvis_memory").select("domain,memory_type,content,importance,evidence_level").eq("user_id",userId).eq("active",true).order("importance",{ascending:false}).limit(6)
+    :{data:null};
   if(memoryRows?.length)memories=memoryRows.map((m:any)=>`[${m.domain}/${m.memory_type}/${m.evidence_level??"unclassified"}] ${m.content}`).join("\n");
   const system=`Eres Jarvis de Astra Oil & Gas. Responde en español, directo, útil y estratégico. No inventes datos. Procurement OS es la fuente de verdad para proveedores y operaciones Astra. Si una pregunta requiere datos del Procurement OS, usa una herramienta de Astra o indica que falta acceso; nunca rellenes con suposiciones.
 
@@ -74,28 +78,29 @@ ${memories||"(sin memoria dinámica registrada)"}
         const stream=new ReadableStream({
           async start(controller){
             try{
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"start"})}\\n\\n`));
               const result=await callGroq(apiKey,messages,(chunk)=>controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"delta",text:chunk})}\\n\\n`)));
               if(!result.text)throw providerError(502,"Empty provider response");
-              await saveMemory(db,userData.user.id,message);
-              await logProvider(db,userData.user.id,provider.id,provider.model,"success",null,result.latency);
+              if(needsMemory)await saveMemory(db,userId,message);
+              await logProvider(db,userId,provider.id,provider.model,"success",null,result.latency);
               controller.enqueue(encoder.encode("data: [DONE]\\n\\n"));controller.close();
             }catch(error){
               const status=(error as any)?.status??502;
-              await logProvider(db,userData.user.id,provider.id,provider.model,"failed",String(status),null,null);
+              await logProvider(db,userId,provider.id,provider.model,"failed",String(status),null,null);
               controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"error",message:error instanceof Error?error.message:"Provider error"})}\\n\\n`));controller.close();
             }
           }
         });
-        return new Response(stream,{status:200,headers:{...headers,"Content-Type":"text/event-stream; charset=utf-8","Cache-Control":"no-cache","Connection":"keep-alive"}});
+        return new Response(stream,{status:200,headers:{...headers,"Content-Type":"text/event-stream; charset=utf-8","Cache-Control":"no-cache, no-transform","X-Accel-Buffering":"no"}});
       }
       const result=await callGemini(apiKey,messages);
       if(!result.text)throw providerError(502,"Empty provider response");
-      await saveMemory(db,userData.user.id,message);
-      await logProvider(db,userData.user.id,provider.id,provider.model,"success",null,result.latency);
-      return new Response(JSON.stringify({ok:true,user_id:userData.user.id,provider:provider.id,model:provider.model,failover:failures.length>0,text:result.text}),{status:200,headers:{...headers,"Content-Type":"application/json"}});    }catch(error){
+      await saveMemory(db,userId,message);
+      await logProvider(db,userId,provider.id,provider.model,"success",null,result.latency);
+      return new Response(JSON.stringify({ok:true,user_id:userId,provider:provider.id,model:provider.model,failover:failures.length>0,text:result.text}),{status:200,headers:{...headers,"Content-Type":"application/json"}});    }catch(error){
       const status=(error as any)?.status??502;
       failures.push({provider:provider.id,status,reason:error instanceof Error?error.message:"Unknown provider error"});
-      await logProvider(db,userData.user.id,provider.id,provider.model,"failed",String(status),null);
+      await logProvider(db,userId,provider.id,provider.model,"failed",String(status),null);
     }
   }
   return new Response(JSON.stringify({error:"All AI providers unavailable",failures}),{status:503,headers:{...headers,"Content-Type":"application/json"}});
