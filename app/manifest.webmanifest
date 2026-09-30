@@ -1,0 +1,9 @@
+{
+  "name":"AOG Jarvis",
+  "short_name":"Jarvis",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#050608",
+  "theme_color":"#050608",
+  "description":"AOG Jarvis command center"
+}
