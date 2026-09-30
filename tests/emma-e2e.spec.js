@@ -24,23 +24,9 @@ test("Emma browser E2E 30 operational cycles", async ({ page }) => {
     await page.locator("#command").fill(message);
     await page.locator("#execute").click();
 
-    await expect.poll(async () => {
-      const count = await assistants.count();
-      if (count <= before) return "";
-      for (let j = count - 1; j >= before; j--) {
-        const t = ((await assistants.nth(j).textContent()) || "").trim();
-        if (t) return t;
-      }
-      return "";
-    }, { timeout: 15000 }).not.toBe("");
-
-    const after = await assistants.count();
-    let text = "";
-    for (let j = after - 1; j >= before; j--) {
-      text = ((await assistants.nth(j).textContent()) || "").trim();
-      if (text) break;
-    }
-
+    await expect.poll(async () => (await assistants.allTextContents()).slice(before).some(t => t.trim().length > 0), { timeout: 15000 }).toBe(true);
+    const texts = (await assistants.allTextContents()).slice(before).map(t => t.trim()).filter(Boolean);
+    const text = texts[texts.length - 1] || "";
     const elapsed = Date.now() - started;
 
     if (/^Error real:/i.test(text) || /error de lectura|read error|stream/i.test(text)) {
