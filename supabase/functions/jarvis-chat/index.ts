@@ -69,11 +69,30 @@ ${memories||"(sin memoria dinámica registrada)"}
     const apiKey=Deno.env.get(provider.key);
     if(!apiKey){failures.push({provider:provider.id,reason:"not_configured"});continue;}
     try{
-      const result=provider.id==="groq"?await callGroq(apiKey,messages):await callGemini(apiKey,messages);
+      if(provider.id==="groq"){
+        const encoder=new TextEncoder();
+        const stream=new ReadableStream({
+          async start(controller){
+            try{
+              const result=await callGroq(apiKey,messages,(chunk)=>controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"delta",text:chunk})}\\n\\n`)));
+              if(!result.text)throw providerError(502,"Empty provider response");
+              await saveMemory(db,userData.user.id,message);
+              await logProvider(db,userData.user.id,provider.id,provider.model,"success",null,result.latency);
+              controller.enqueue(encoder.encode("data: [DONE]\\n\\n"));controller.close();
+            }catch(error){
+              const status=(error as any)?.status??502;
+              await logProvider(db,userData.user.id,provider.id,provider.model,"failed",String(status),null,null);
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"error",message:error instanceof Error?error.message:"Provider error"})}\\n\\n`));controller.close();
+            }
+          }
+        });
+        return new Response(stream,{status:200,headers:{...headers,"Content-Type":"text/event-stream; charset=utf-8","Cache-Control":"no-cache","Connection":"keep-alive"}});
+      }
+      const result=await callGemini(apiKey,messages);
       if(!result.text)throw providerError(502,"Empty provider response");
-      await saveMemory(db,userData.user.id,message);await logProvider(db,userData.user.id,provider.id,provider.model,"success",null,result.latency);
-      return new Response(JSON.stringify({ok:true,user_id:userData.user.id,provider:provider.id,model:provider.model,failover:failures.length>0,text:result.text}),{status:200,headers:{...headers,"Content-Type":"application/json"}});
-    }catch(error){
+      await saveMemory(db,userData.user.id,message);
+      await logProvider(db,userData.user.id,provider.id,provider.model,"success",null,result.latency);
+      return new Response(JSON.stringify({ok:true,user_id:userData.user.id,provider:provider.id,model:provider.model,failover:failures.length>0,text:result.text}),{status:200,headers:{...headers,"Content-Type":"application/json"}});    }catch(error){
       const status=(error as any)?.status??502;
       failures.push({provider:provider.id,status,reason:error instanceof Error?error.message:"Unknown provider error"});
       await logProvider(db,userData.user.id,provider.id,provider.model,"failed",String(status),null);
