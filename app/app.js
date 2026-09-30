@@ -23,7 +23,51 @@ function selectModule(key){activeModule=modules[key]?key:"conversation";moduleTi
 function renderSession(session){const signed=Boolean(session?.user);home.classList.remove("hidden");chat.classList.remove("hidden");workspace.classList.toggle("hidden",!signed);logout.classList.toggle("hidden",!signed);home.classList.toggle("compact",!signed);if(signed)setStatus("EMMA LISTA");else setStatus("EMMA LISTA · MODO BÁSICO")}
 async function ensureAuth(){const {data,error:sessionError}=await supabase.auth.getSession();if(sessionError)throw new Error("AUTH_SESSION: "+sessionError.message);if(data?.session?.access_token)return data.session;setStatus("CONECTANDO EMMA");const {data:anon,error}=await supabase.auth.signInAnonymously();if(error||!anon?.session)throw new Error("AUTH_ANON: "+(error?.message||"No se pudo autenticar la sesión anónima."));renderSession(anon.session);return anon.session}
 async function invoke(name,body){await ensureAuth();const {data,error}=await supabase.functions.invoke(name,{body});if(!error)return data;let detail="";try{if(error.context){const response=error.context instanceof Response?error.context:null;if(response){const clone=response.clone();try{const payload=await clone.json();detail=payload?.error||payload?.message||JSON.stringify(payload)}catch{detail=await response.text()}}}}catch{}throw new Error((detail||error.message||"Edge Function error").slice(0,800))}
-async function invokeChat(q){const data=await invoke("jarvis-chat",{message:q,history});const answer=data?.text?.trim()||"No recibí una respuesta del núcleo.";history.push({role:"user",content:q},{role:"assistant",content:answer});history=history.slice(-10);return answer}
+async function invokeChat(q){
+  await ensureAuth();
+  const session=(await supabase.auth.getSession()).data.session;
+  if(!session?.access_token)throw new Error("AUTH_SESSION");
+  const response=await fetch(`${CONFIG.supabaseUrl}/functions/v1/jarvis-chat`,{
+    method:"POST",
+    headers:{"Authorization":`Bearer ${session.access_token}`,"apikey":CONFIG.supabasePublishableKey,"Content-Type":"application/json"},
+    body:JSON.stringify({message:q,history})
+  });
+  if(!response.ok)throw new Error((await response.text()).slice(0,800));
+  const type=response.headers.get("content-type")||"";
+  if(!type.includes("text/event-stream")){
+    const data=await response.json();
+    const answer=data?.text?.trim()||"No recibí una respuesta del núcleo.";
+    history.push({role:"user",content:q},{role:"assistant",content:answer});
+    history=history.slice(-10);
+    return answer;
+  }
+  let answer="",buffer="";
+  const reader=response.body.getReader(),decoder=new TextDecoder();
+  const bubble=document.createElement("div");
+  bubble.className="message assistant";
+  messages.appendChild(bubble);
+  for(;;){
+    const x=await reader.read();
+    if(x.done)break;
+    buffer+=decoder.decode(x.value,{stream:true});
+    const lines=buffer.split("\n");buffer=lines.pop()||"";
+    for(const line of lines){
+      if(!line.startsWith("data:"))continue;
+      const p=line.slice(5).trim();
+      if(!p||p==="[DONE]")continue;
+      const chunk=JSON.parse(p);
+      if(chunk.type==="delta"){
+        answer+=chunk.text||"";
+        bubble.textContent=answer;
+        messages.scrollTop=messages.scrollHeight;
+      }
+      if(chunk.type==="error")throw new Error(chunk.message||"STREAM_ERROR");
+    }
+  }
+  history.push({role:"user",content:q},{role:"assistant",content:answer});
+  history=history.slice(-10);
+  return answer;
+}
 async function invokeGitHub(q){const tool=getTool("github.read");const match=q.match(/(?:archivo|file|ruta|path)\s+([\w./-]+)$/i);const path=match?.[1]||"README.md";return await invoke(tool.functionName,{repository:"astraoilandgas2026/AOG-Jarvis",path})}
 async function invokeTool(toolId,body={}){const tool=getTool(toolId);if(!tool?.functionName)throw new Error("TOOL_CONFIG: "+toolId);return await invoke(tool.functionName,{tool:toolId,...body})}
 async function invokeGoogle(action,body={}){const res=await fetch(CONFIG.googleBridgeUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action,...body})});const data=await res.json();if(!data?.ok)throw new Error("GOOGLE_BRIDGE: "+(data?.error||"solicitud rechazada"));return data}
