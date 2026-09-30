@@ -8,19 +8,20 @@ test("Emma browser E2E 23 real cycles", async ({ page }) => {
   for (let i = 1; i <= 23; i++) {
     const message = i <= 2 ? "Hola Emma, ¿cómo estás?" : "Responde solamente: OK";
     const started = Date.now();
-    await page.locator("#command").fill(message);
-    await page.locator("#execute").click();
-
     const assistants = page.locator("#messages .message.assistant");
     const before = await assistants.count();
 
+    await page.locator("#command").fill(message);
+    await page.locator("#execute").click();
+
     await expect.poll(async () => await assistants.count(), { timeout: 10000 }).toBeGreaterThan(before);
-    const elapsed = Date.now() - started;
     const last = assistants.last();
     await expect(last).toBeVisible();
+    await expect.poll(async () => ((await last.textContent()) || "").trim(), { timeout: 10000 }).not.toBe("");
 
-    const text = (await last.textContent())?.trim() || "";
-    if (!text || /^Error real:/i.test(text) || /error de lectura|read error|stream/i.test(text)) {
+    const elapsed = Date.now() - started;
+    const text = ((await last.textContent()) || "").trim();
+    if (/^Error real:/i.test(text) || /error de lectura|read error|stream/i.test(text)) {
       throw new Error(`CYCLE ${i} FAILED after ${elapsed}ms: ${text}`);
     }
     results.push(elapsed);
