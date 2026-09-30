@@ -2,25 +2,24 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.105.0";
 import { CONFIG } from "./config.js";
 import { createOrb } from "./modules/orb.js";
 import { createVoice } from "./modules/voice.js";
-import { detectModule, getModules } from "./modules/router.js";
 import { getTool } from "./core/tool-registry.js?v=24";
 import { classifyIntent } from "./core/intent-router.js?v=24";
 import { normalizeSupplierQuery } from "./core/query-normalizer.js";
 const supabase=createClient(CONFIG.supabaseUrl,CONFIG.supabasePublishableKey);
 const $=s=>document.querySelector(s);
 const command=$("#command"),messages=$("#messages"),chat=$("#chat"),home=$("#home");
-const workspace=$("#workspace"),logout=$("#logout"),install=$("#install"),result=$("#result"),moduleTitle=$("#module-title"),moduleContent=$("#module-content"),modulesNav=$("#modules");
+const logout=$("#logout"),install=$("#install"),result=$("#result");
 let voice=null;
 const orb=createOrb({root:$("#orb"),status:$("#orb-status"),onActivate:()=>voice?.start()});
 voice=createVoice({orb,onTranscript:t=>{command.value=t;execute(t)},onError:e=>setStatus(e)});
-const modules=getModules();let activeModule="astra",deferredInstall=null,history=[];
+let deferredInstall=null,history=[];
 function setStatus(text){$("#orb-status").textContent=text}
 function speak(text){if(!("speechSynthesis"in window))return;window.speechSynthesis.cancel();orb.setState("speaking");const u=new SpeechSynthesisUtterance(text);u.lang="es-ES";u.rate=.98;u.onend=()=>orb.setState("idle");window.speechSynthesis.speak(u)}
 function addMessage(role,text){const el=document.createElement("div");el.className="message "+role;el.textContent=text;messages.appendChild(el);messages.scrollTop=messages.scrollHeight}
 async function addArtifactMessage(artifact){const {renderArtifact}=await import("./modules/documents.js");const el=document.createElement("div");el.className="message assistant artifact-message";const card=document.createElement("div");renderArtifact(card,artifact);el.appendChild(card);messages.appendChild(el);messages.scrollTop=messages.scrollHeight}
 function renderModules(){modulesNav.innerHTML="";Object.entries(modules).forEach(([key,m])=>{const b=document.createElement("button");b.textContent=m.label;b.dataset.module=key;b.className=key===activeModule?"active":"";b.onclick=()=>selectModule(key);modulesNav.appendChild(b)})}
 function selectModule(key){activeModule=modules[key]?key:"conversation";moduleTitle.textContent=modules[activeModule].label;moduleContent.innerHTML="<p class='module-description'>"+modules[activeModule].description+"</p>";modulesNav.querySelectorAll("button").forEach(b=>b.classList.toggle("active",b.dataset.module===activeModule))}
-function renderSession(session){const signed=Boolean(session?.user);home.classList.remove("hidden");chat.classList.remove("hidden");workspace.classList.toggle("hidden",!signed);logout.classList.toggle("hidden",!signed);home.classList.toggle("compact",!signed);if(signed)setStatus("EMMA LISTA");else setStatus("EMMA LISTA · MODO BÁSICO")}
+function renderSession(session){const signed=Boolean(session?.user);home.classList.remove("hidden");chat.classList.remove("hidden");logout.classList.toggle("hidden",!signed);home.classList.toggle("compact",!signed);if(signed)setStatus("EMMA LISTA");else setStatus("EMMA LISTA · MODO BÁSICO")}
 async function ensureAuth(){const {data,error:sessionError}=await supabase.auth.getSession();if(sessionError)throw new Error("AUTH_SESSION: "+sessionError.message);if(data?.session?.access_token)return data.session;setStatus("CONECTANDO EMMA");const {data:anon,error}=await supabase.auth.signInAnonymously();if(error||!anon?.session)throw new Error("AUTH_ANON: "+(error?.message||"No se pudo autenticar la sesión anónima."));renderSession(anon.session);return anon.session}
 async function invoke(name,body){await ensureAuth();const {data,error}=await supabase.functions.invoke(name,{body});if(!error)return data;let detail="";try{if(error.context){const response=error.context instanceof Response?error.context:null;if(response){const clone=response.clone();try{const payload=await clone.json();detail=payload?.error||payload?.message||JSON.stringify(payload)}catch{detail=await response.text()}}}}catch{}throw new Error((detail||error.message||"Edge Function error").slice(0,800))}
 async function invokeContext(q){return await invokeTool("astra.context",{q,limit:8})}
@@ -82,7 +81,7 @@ function fastReply(q){
   if(/^(hola|holi|hey|hello|buenas)[!.?,\s]*$/i.test(q))return "Hola, Leíto. Aquí estoy.";
   return null;
 }
-async function execute(text){const q=text.trim();if(!q)return;command.value="";addMessage("user",q);const quick=fastReply(q);if(quick){addMessage("assistant",quick);speak(quick);return}orb.setState("thinking");const intent=classifyIntent(q);const target=intent.module||detectModule(q);selectModule(target);try{
+async function execute(text){const q=text.trim();if(!q)return;command.value="";addMessage("user",q);const quick=fastReply(q);if(quick){addMessage("assistant",quick);speak(quick);return}orb.setState("thinking");const intent=classifyIntent(q);try{
 if(intent.type==="memory_write"){await invokeTool("memory.write",{q,domain:"personal",memory_type:"note",importance:4});const reply="Anotado. Queda guardado.";addMessage("assistant",reply);speak(reply);return}
 if(intent.type==="task_create"){const title=parseTaskTitle(q),due_at=parseDueAt(q);await invokeTool("personal.task.create",{title,due_at,priority:/urgente|urgent/.test(q)?"urgent":"normal"});const reply=due_at?"Listo. Quedó programado.":"Listo. Quedó pendiente.";addMessage("assistant",reply);speak(reply);return}
 if(intent.type==="task_list"){const data=await invokeTool("personal.task.list",{limit:20});const rows=data?.data||[];const reply=rows.length?rows.map((x,i)=>`${i+1}. ${x.title}${x.due_at?" — "+new Date(x.due_at).toLocaleString("es-CL"):""}`).join("\n"):"No tienes pendientes guardados.";addMessage("assistant",reply);speak(reply);return}
@@ -100,7 +99,6 @@ const context=await invokeContext(q);const answer=await invokeChat(q,context?.da
 logout.onclick=()=>supabase.auth.signOut();$("#execute").onclick=()=>execute(command.value);$("#voice").onclick=()=>voice?.start();command.addEventListener("keydown",e=>{if(e.key==="Enter")execute(command.value)});
 supabase.auth.onAuthStateChange((_event,session)=>renderSession(session));
 const {data:{session}}=await supabase.auth.getSession();
-renderModules();selectModule(activeModule);
 if(session)renderSession(session);else{setStatus("CONECTANDO EMMA");try{await ensureAuth()}catch(error){setStatus("CONFIGURACIÓN DE ACCESO PENDIENTE");console.error("Anonymous auth unavailable",error)}}
 if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=16").catch(()=>{});
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;install.classList.remove("hidden")});install.onclick=async()=>{if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;install.classList.add("hidden")};
