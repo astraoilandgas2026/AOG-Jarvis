@@ -1,21 +1,41 @@
 # AOG-Jarvis Architecture
 
-Boundary: AOG-Jarvis is an isolated assistant layer. It does not own supplier master data.
+AOG-Jarvis is the assistant layer; it does not own supplier master data. The Astra Procurement OS remains the source of truth.
 
-Existing Supabase Procurement OS tables remain authoritative: suppliers, contacts, products, technical_specs, commercial_offers, certifications, documents, due_diligence, logistics, timeline_events, follow_ups, red_flags, intelligence_facts.
+## Target product
+Jarvis evolves from a web command center into a resident desktop assistant:
 
-Security model: Client → authenticated user → Jarvis tool endpoint → Supabase Auth validation → server-side Supabase client → existing data model.
+Wake word → Voice → Jarvis Core → Intent Router → Tool Layer → authorized service → source of truth → response
 
-The service-role key, if required by a server-side tool, must exist only as an Edge Function secret.
+The web app is the current control surface. A future desktop shell can keep a compact orb visible, start with the OS, capture wake-word/audio locally, and open the full command center on demand.
 
-Milestone 1 is READ ONLY. First tool: search-supplier.
+## Domains
+- ASTRA: procurement, suppliers, products, offers, technical intelligence, DD, documents, logistics, timeline.
+- PERSONAL: calendar, tasks, reminders, email and personal workflows.
+- CONVERSATION: private conversational support; no automatic medical diagnosis or high-stakes decisions.
+- RESEARCH: web research and synthesis.
+- MEMORY: explicit user-authorized context.
+- AUTOMATION: controlled actions with confirmation and auditability.
 
-Input: q required string; limit optional integer capped server-side.
+## Security
+Client → authenticated session → Jarvis tool endpoint → Supabase Auth → least-privilege data access.
 
-Output: supplier identity, legal status, operation status, location, lifecycle, capacity/volume fields and verification boundary.
+Never expose a service-role key in the browser. Never create a generic unrestricted SQL tool. Read/write/delete tools must be separate and permissioned.
 
-No INSERT, UPDATE or DELETE capability exists in milestone 1.
+## Current milestone
+READ-ONLY supplier search through jarvis-search-supplier.
 
-Expansion path: search_supplier → supplier profile → products → technical/commercial intelligence → DD → documents → follow-ups/timeline → controlled write tools → automation.
+The frontend does not query procurement tables directly.
 
-Non-goals: duplicated supplier database, localStorage as source of truth, unrestricted SQL endpoint, generic CRUD endpoint, production data seeding.
+## Evolution
+1. resident-ready PWA/control surface
+2. voice input and orb states
+3. tool registry
+4. supplier/DD/offer/document tools
+5. conversation and memory
+6. controlled write actions
+7. desktop shell + wake word
+8. automation and background jobs
+9. audit, backup and recovery
+
+No production supplier records are seeded by Jarvis.
