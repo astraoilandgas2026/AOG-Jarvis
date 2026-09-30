@@ -23,7 +23,7 @@ jobs:
       - name: Wait for GitHub Pages deployment
         run: |
           for i in $(seq 1 36); do
-            if curl -fsS "https://astraoilandgas2026.github.io/AOG-Jarvis/?e2e=1" | grep -q "app.js?v=20"; then
+            if curl -fsS "https://astraoilandgas2026.github.io/AOG-Jarvis/?e2e=1" | grep -q "app.js?v=21"; then
               echo "Pages deployment v21 detected"
               exit 0
             fi
