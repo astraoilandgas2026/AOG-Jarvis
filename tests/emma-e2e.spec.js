@@ -24,7 +24,7 @@ test("Emma browser E2E 30 operational cycles", async ({ page }) => {
     await page.locator("#command").fill(message);
     await page.locator("#execute").click();
 
-    await expect.poll(async () => (await assistants.allTextContents()).slice(before).some(t => t.trim().length > 0), { timeout: 15000 }).toBe(true);
+    await page.waitForTimeout(5000); if(!(await assistants.allTextContents()).slice(before).some(t=>t.trim().length>0)) throw new Error("NO_ASSISTANT\n"+errors.join("\n"));
     const texts = (await assistants.allTextContents()).slice(before).map(t => t.trim()).filter(Boolean);
     const text = texts[texts.length - 1] || "";
     const elapsed = Date.now() - started;
