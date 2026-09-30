@@ -24,13 +24,13 @@ jobs:
         run: |
           for i in $(seq 1 36); do
             if curl -fsS "https://astraoilandgas2026.github.io/AOG-Jarvis/?e2e=1" | grep -q "app.js?v=20"; then
-              echo "Pages deployment v20 detected"
+              echo "Pages deployment v21 detected"
               exit 0
             fi
-            echo "Waiting for Pages deployment v20... attempt $i/36"
+            echo "Waiting for Pages deployment v21... attempt $i/36"
             sleep 10
           done
-          echo "Pages deployment v20 not detected"
+          echo "Pages deployment v21 not detected"
           exit 1
       - name: Install Playwright test runner
         run: npm install --no-save @playwright/test@1.55.0
