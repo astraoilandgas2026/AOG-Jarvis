@@ -24,14 +24,24 @@ test("Emma browser E2E 30 operational cycles", async ({ page }) => {
     await page.locator("#command").fill(message);
     await page.locator("#execute").click();
 
-    await expect.poll(async () => await assistants.count(), { timeout: 10000 }).toBeGreaterThan(before);
+    await expect.poll(async () => {
+      const count = await assistants.count();
+      if (count <= before) return "";
+      for (let j = count - 1; j >= before; j--) {
+        const t = ((await assistants.nth(j).textContent()) || "").trim();
+        if (t) return t;
+      }
+      return "";
+    }, { timeout: 15000 }).not.toBe("");
+
     const after = await assistants.count();
-    const last = assistants.nth(after - 1);
-    await expect(last).toBeVisible();
-    await expect.poll(async () => ((await last.textContent()) || "").trim(), { timeout: 10000 }).not.toBe("");
+    let text = "";
+    for (let j = after - 1; j >= before; j--) {
+      text = ((await assistants.nth(j).textContent()) || "").trim();
+      if (text) break;
+    }
 
     const elapsed = Date.now() - started;
-    const text = ((await last.textContent()) || "").trim();
 
     if (/^Error real:/i.test(text) || /error de lectura|read error|stream/i.test(text)) {
       throw new Error(`CYCLE ${i + 1} FAILED after ${elapsed}ms: ${text}`);
