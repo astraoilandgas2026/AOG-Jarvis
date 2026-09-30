@@ -17,6 +17,8 @@ export const TOOL_REGISTRY=Object.freeze({
  "astra.followups":{id:"astra.followups",label:"Follow-ups",module:"astra",permission:"read",functionName:"jarvis-tool",description:"Consulta próximas acciones."},
  "astra.write":{id:"astra.write",label:"Escritura Astra",module:"astra",permission:"write",functionName:null,description:"Deshabilitado hasta confirmar permisos y audit trail."},
  "github.read":{id:"github.read",label:"GitHub",module:"github",permission:"read",functionName:"jarvis-github-read",description:"Lectura autenticada de repositorios públicos; OAuth/token para privados se añadirá después."},
+ "mail.read":{id:"mail.read",label:"Correo Astra · Hostinger",module:"personal",permission:"read",functionName:"jarvis-mail",description:"Lee la bandeja del buzón Astra en Hostinger."},
+ "mail.send":{id:"mail.send",label:"Enviar correo Astra",module:"personal",permission:"write",functionName:"jarvis-mail",description:"Envía correo desde el buzón Astra; requiere confirmación explícita."},
  "gmail.read":{id:"gmail.read",label:"Gmail",module:"gmail",permission:"read",functionName:null,description:"Conector preparado; OAuth pendiente."},
  "files.read":{id:"files.read",label:"Archivos",module:"files",permission:"read",functionName:null,description:"Conector preparado."}
 });
