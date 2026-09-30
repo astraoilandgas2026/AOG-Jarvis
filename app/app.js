@@ -1,0 +1,1 @@
+const result=document.querySelector('#result');const input=document.querySelector('#query');document.querySelector('#search').addEventListener('click',()=>{const q=input.value.trim();result.textContent=q?'Tool layer not connected yet. Read-only authentication gate comes first.':'Enter a supplier search term.';});
