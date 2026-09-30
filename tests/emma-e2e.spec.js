@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 test("Emma browser E2E 30 operational cycles", async ({ page }) => {
-  await page.goto("https://astraoilandgas2026.github.io/AOG-Jarvis/?e2e=1", { waitUntil: "networkidle", timeout: 60000 });
+  await page.goto(process.env.EMMA_TEST_URL || "https://astraoilandgas2026.github.io/AOG-Jarvis/?e2e=1", { waitUntil: "networkidle", timeout: 60000 });
   await expect(page.locator("#command")).toBeVisible({ timeout: 30000 });
 
   const messages = [
