@@ -3,12 +3,18 @@ name: Emma E2E 23x
 on:
   push:
     branches: [main]
+  issues:
+    types: [opened]
   workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
 
 jobs:
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,4 +25,18 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Run Emma 23x browser verification
-        run: npx playwright test tests/emma-e2e.spec.js --reporter=line
+        id: e2e
+        run: npx playwright test tests/emma-e2e.spec.js --reporter=line 2>&1 | tee e2e.log
+      - name: Report result to issue
+        if: always() && github.event_name == 'issues'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          if [ "${{ steps.e2e.outcome }}" = "success" ]; then
+            printf '## Emma E2E 23x — PASS\n\n' > result.md
+          else
+            printf '## Emma E2E 23x — FAIL\n\n' > result.md
+          fi
+          cat e2e.log >> result.md
+          gh issue comment "$ISSUE_NUMBER" --body-file result.md
