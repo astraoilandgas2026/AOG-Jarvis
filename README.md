@@ -35,3 +35,5 @@ E2E browser verification is executed by GitHub Actions with Playwright.
 <!-- 30x operational E2E v2 -->
 
 <!-- rerun after jarvis-chat context injection -->
+
+<!-- rerun task-list fix -->
