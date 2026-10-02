@@ -36,6 +36,21 @@ async function memorySearch(db:any,userId:string,q:string,limit:number){
   return scored.map(({_score,...m}:any)=>m);
 }
 
+function buildKnowledgeGraph(data:any){
+ const nodes:any[]=[]; const edges:any[]=[]; const seen=new Set<string>();
+ const add=(id:string,type:string,label:string,meta:any={})=>{if(!id||seen.has(id))return;seen.add(id);nodes.push({id,type,label,meta})};
+ const link=(a:string,b:string,type:string)=>{if(a&&b)edges.push({from:a,to:b,type})};
+ for(const s of data.suppliers||[]){add("supplier:"+s.id,"supplier",s.legal_name||s.trading_name||s.id,{verification:"DOCUMENTED"});}
+ for(const p of data.products||[]){add("product:"+p.id,"product",p.name||p.id,{verification:p.verification_status});link("supplier:"+p.supplier_id,"product:"+p.id,"supplies");}
+ for(const o of data.offers||[]){add("offer:"+o.id,"offer",String(o.price??"offer"),{verification:o.verification_status,incoterm:o.incoterm});link("supplier:"+o.supplier_id,"offer:"+o.id,"offers");if(o.product_id)link("offer:"+o.id,"product:"+o.product_id,"for_product");}
+ for(const d of data.documents||[]){add("document:"+d.id,"document",d.title||d.file_name||d.id,{verification:d.verification_status});link("supplier:"+d.supplier_id,"document:"+d.id,"evidence");}
+ for(const x of data.due_diligence||[]){add("dd:"+x.id,"dd",x.category||x.id,{status:x.status});link("supplier:"+x.supplier_id,"dd:"+x.id,"has_dd");}
+ for(const x of data.contacts||[]){add("contact:"+x.id,"contact",x.name||x.email||x.id,{});link("supplier:"+x.supplier_id,"contact:"+x.id,"contact");}
+ for(const x of data.timeline||[]){add("event:"+x.id,"event",x.title||x.event_type||x.id,{});link("supplier:"+x.supplier_id,"event:"+x.id,"event");}
+ for(const x of data.follow_ups||[]){add("followup:"+x.id,"followup",x.title||x.id,{status:x.status});link("supplier:"+x.supplier_id,"followup:"+x.id,"follow_up");}
+ return {nodes,edges};
+}
+
 async function unifiedContext(db:any,q:string,limit:number){
   const tokens=searchPattern(q);
   const patterns=tokens.map(t=>"%"+t.replace(/[%_]/g,"\\$&")+"%");
@@ -52,7 +67,9 @@ async function unifiedContext(db:any,q:string,limit:number){
     supplierIds.length?db.from("intelligence_facts").select("id,domain_id,entity_type,entity_id,field_name,value_text,unit,fact_date,source_type,source_ref,verification_status,is_contradiction,contradiction_key,notes,created_at,updated_at").or(supplierIds.map(id=>`entity_id.eq.${id}`).join(",")).order("updated_at",{ascending:false}).limit(50):Promise.resolve({data:[]}),
     supplierIds.length?db.from("red_flags").select("*").in("supplier_id",supplierIds).order("created_at",{ascending:false}).limit(20):Promise.resolve({data:[]})
   ]);
-  return {query:q,tokens,suppliers:suppliers||[],domains:domains||[],contacts:contacts.data||[],products:products.data||[],offers:offers.data||[],documents:docs.data||[],due_diligence:dd.data||[],timeline:timeline.data||[],follow_ups:followups.data||[],intelligence_facts:facts.data||[],red_flags:redFlags.data||[]};
+  const result={query:q,tokens,suppliers:suppliers||[],domains:domains||[],contacts:contacts.data||[],products:products.data||[],offers:offers.data||[],documents:docs.data||[],due_diligence:dd.data||[],timeline:timeline.data||[],follow_ups:followups.data||[],intelligence_facts:facts.data||[],red_flags:redFlags.data||[]};
+  result.knowledge_graph=buildKnowledgeGraph(result);
+  return result;
 }
 
 Deno.serve(async(req:Request)=>{
@@ -74,16 +91,22 @@ Deno.serve(async(req:Request)=>{
 
  if(tool==="astra.context"){
    if(q.length<2)return json({error:"Context query must contain at least 2 characters"},400,h);
+   const cacheKey=q.toLowerCase().replace(/\\s+/g," ").trim().slice(0,240)+"|"+limit;
+   const {data:cached}=await db.from("jarvis_context_cache").select("payload,expires_at").eq("user_id",userData.user.id).eq("cache_key",cacheKey).gt("expires_at",new Date().toISOString()).maybeSingle();
+   if(cached?.payload)return json({...cached.payload,cache:"hit"},200,h);
    const data=await unifiedContext(db,q,limit);
-   return json({ok:true,user_id:userData.user.id,tool,count:data.suppliers.length+data.domains.length,data},200,h);
+   const response={ok:true,user_id:userData.user.id,tool,count:data.suppliers.length+data.domains.length,data};
+   const expiresAt=new Date(Date.now()+10*60*1000).toISOString();
+   await db.from("jarvis_context_cache").upsert({user_id:userData.user.id,cache_key:cacheKey,query_text:q.slice(0,1000),payload:response,expires_at:expiresAt,updated_at:new Date().toISOString()},{onConflict:"user_id,cache_key"});
+   return json({...response,cache:"miss"},200,h);
  }
 
  if(tool==="memory.write"){
    if(q.length<2)return json({error:"Memory text required"},400,h);
    const memory={user_id:userData.user.id,domain:body.domain||"personal",memory_type:body.memory_type||"note",content:q.slice(0,1200),importance:Math.min(Math.max(Number(body.importance)||4,1),5),source:body.source||"conversation",evidence_level:body.evidence_level||"user_stated",active:true};
-   const {data,error}=await db.from("jarvis_memory").insert(memory).select("id,domain,memory_type,content,importance,source,evidence_level,active,created_at,updated_at").single();
+   const {error}=await db.from("jarvis_memory").insert(memory);
    if(error)return json({error:"Memory write failed",detail:error.message},500,h);
-   return json({ok:true,tool,data},200,h);
+   return json({ok:true,tool,data:{...memory}},200,h);
  }
 
  if(tool==="memory.read"){
@@ -102,16 +125,16 @@ Deno.serve(async(req:Request)=>{
    if(typeof body.evidence_level==="string")patch.evidence_level=body.evidence_level;
    if(body.active!==undefined)patch.active=Boolean(body.active);
    if(!Object.keys(patch).length)return json({error:"No memory fields to update"},400,h);
-   const {data,error}=await db.from("jarvis_memory").update(patch).eq("id",memoryId).eq("user_id",userData.user.id).select("id,domain,memory_type,content,importance,source,evidence_level,active,created_at,updated_at").single();
+   const {error}=await db.from("jarvis_memory").update(patch).eq("id",memoryId).eq("user_id",userData.user.id);
    if(error)return json({error:"Memory update failed",detail:error.message},500,h);
-   return json({ok:true,tool,data},200,h);
+   return json({ok:true,tool,data:{id:memoryId,...patch}},200,h);
  }
 
  if(tool==="memory.deactivate"){
    if(!memoryId)return json({error:"memory_id required"},400,h);
-   const {data,error}=await db.from("jarvis_memory").update({active:false}).eq("id",memoryId).eq("user_id",userData.user.id).select("id,domain,memory_type,content,importance,source,evidence_level,active,created_at,updated_at").single();
+   const {error}=await db.from("jarvis_memory").update({active:false}).eq("id",memoryId).eq("user_id",userData.user.id);
    if(error)return json({error:"Memory deactivate failed",detail:error.message},500,h);
-   return json({ok:true,tool,data},200,h);
+   return json({ok:true,tool,data:{id:memoryId,active:false}},200,h);
  }
 
  if(tool==="personal.task.create"){
