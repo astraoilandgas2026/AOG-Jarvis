@@ -11,6 +11,7 @@ import { analyzeProcurement } from "./modules/procurement-intelligence.js";
 import { buildExecutionPlan } from "./core/execution-plan.js";
 import { planExecution, executionResult } from "./core/execution-orchestrator.js";
 import { automationPlan } from "./core/automation-engine.js";
+import { rankTools, PERFORMANCE_RULE } from "./core/performance-engine.js";
 const supabase=createClient(CONFIG.supabaseUrl,CONFIG.supabasePublishableKey);
 const $=s=>document.querySelector(s);
 const command=$("#command"),messages=$("#messages"),chat=$("#chat"),home=$("#home");
@@ -34,17 +35,16 @@ async function orchestrateQuery(q){
  const lower=q.toLowerCase();
  const kind=/correo|email|gmail/.test(lower)?"email":/calendario|reunión|reunion|agenda/.test(lower)?"calendar":/github|código|codigo|repo/.test(lower)?"project":/documento|coa|sds|iscc|ficha/.test(lower)?"documents":"supplier";
  const intentMap={supplier:["astra.intelligence","document.intelligence","procurement.intelligence"],email:["gmail.read"],calendar:["calendar.read"],project:["github.read"],documents:["astra.documents","document.intelligence","procurement.intelligence"]};
- const ctx=planExecution({query:q,intent:{tool:intentMap[kind][0]},registry:executionRegistry()});
- const outputs=[];
- for(const id of intentMap[kind]){
-   try{
-     let data;
-     if(id==="github.read")data=await invokeGitHub(q);
-     else data=await invokeTool(id,id==="astra.intelligence"||id==="document.intelligence"||id==="procurement.intelligence"||id==="astra.documents"?{q,limit:10}:{});
-     outputs.push(executionResult(ctx,{id,status:"ok",data,source:id}));
-   }catch(error){outputs.push(executionResult(ctx,{id,status:"error",error:error?.message||String(error),source:id}))}
- }
- return{kind,steps:outputs.map(x=>x.steps[x.steps.length-1]),status:outputs.some(x=>x.status==="error")?"partial":"completed"};
+ const planned=rankTools(intentMap[kind].map(id=>getTool(id)).filter(Boolean));
+ const ctx=planExecution({query:q,tools:planned.map(t=>t.id),registry:executionRegistry()});
+ const settled=await Promise.allSettled(planned.map(async t=>{
+   if(t.id==="github.read")return{id:t.id,data:await invokeGitHub(q)};
+   return{id:t.id,data:await invokeTool(t.id,{q,limit:10})};
+ }));
+ const steps=settled.map((r,i)=>r.status==="fulfilled"
+   ?executionResult(ctx,{id:planned[i].id,status:"ok",data:r.value.data,source:getTool(planned[i].id)?.functionName||"local"}).steps.find(s=>s.id===planned[i].id)
+   :executionResult(ctx,{id:planned[i].id,status:"error",error:r.reason?.message||"Tool failed",source:getTool(planned[i].id)?.functionName||"local"}).steps.find(s=>s.id===planned[i].id));
+ return{status:steps.some(s=>s.status==="error")?"partial":"completed",kind,performance_rule:PERFORMANCE_RULE,steps,results:settled.map((r,i)=>({tool:planned[i].id,status:r.status,data:r.status==="fulfilled"?r.value.data:undefined,error:r.status==="rejected"?(r.reason?.message||"Tool failed"):undefined}))};
 }
 function parseDueAt(q){const rel=q.match(/en\s+(\d+)\s*(minutos?|horas?)/i);if(!rel)return null;const d=new Date();d.setMinutes(d.getMinutes()+Number(rel[1])*(rel[2].toLowerCase().startsWith("hora")?60:1));return d.toISOString()}
 function parseTaskTitle(q){return q.replace(/^(?:emma[,\s]*)?(?:pon|crea|agrega|añade|anota|apunta|programa|recuérdame|recuerdame|alarma|recordatorio)\s*/i,"").trim()||q}

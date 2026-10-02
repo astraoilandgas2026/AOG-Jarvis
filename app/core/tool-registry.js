@@ -41,3 +41,4 @@ export const TOOL_REGISTRY=Object.freeze({
 });
 export function getTool(id){return TOOL_REGISTRY[id]||null}
 export function listTools({module=null,permission=null}={}){return Object.values(TOOL_REGISTRY).filter(t=>(!module||t.module===module)&&(!permission||t.permission===permission))}
+export function getToolContract(id){const t=getTool(id);if(!t)return null;return{...t,execution:t.permission==="write"?"WRITE":"READ",cost:t.module==="ai"?"model":"zero",latency:t.module==="ai"?"model":"fast",source:t.functionName?"supabase-or-connector":"local",evidence:"tool-output",fallback:t.module==="ai"?"deterministic-or-provider-failover":null}}

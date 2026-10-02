@@ -62,9 +62,20 @@ Deno.serve(async(req:Request)=>{
   let memories="";
   const needsMemory=!/^(hola|holi|buenas|buenos días|buenas tardes|buenas noches|hey|hello|gracias|ok|okay|perfecto|listo)[!.?,\s]*$/i.test(message);
   const {data:memoryRows}=needsMemory
-    ?await db.from("jarvis_memory").select("domain,memory_type,content,importance,evidence_level").eq("user_id",userId).eq("active",true).order("importance",{ascending:false}).limit(6)
+    ?await db.from("jarvis_memory").select("domain,memory_type,content,importance,evidence_level,created_at,updated_at").eq("user_id",userId).eq("active",true).order("updated_at",{ascending:false}).limit(40)
     :{data:null};
-  if(memoryRows?.length)memories=memoryRows.map((m:any)=>`[${m.domain}/${m.memory_type}/${m.evidence_level??"unclassified"}] ${m.content}`).join("\n");
+  if(memoryRows?.length){
+    const tokens=[...new Set((message.toLowerCase().match(/[a-záéíóúñ0-9]{3,}/gi)||[]))].filter(x=>!["que","como","para","con","los","las","del","una","por","qué","quiero","tengo","este","esta","esto","desde","ahora"].includes(x));
+    const now=Date.now();
+    const ranked=memoryRows.map((m:any)=>{
+      const hay=(m.domain+" "+m.memory_type+" "+m.content).toLowerCase();
+      const matches=tokens.reduce((n,t)=>n+(hay.includes(t)?1:0),0);
+      const ageDays=Math.max(0,(now-new Date(m.updated_at||m.created_at).getTime())/86400000);
+      const decay=1/(1+ageDays/30);
+      return {...m,_score:matches*12+(Number(m.importance)||0)*decay};
+    }).sort((a:any,b:any)=>b._score-a._score).slice(0,6);
+    memories=ranked.map(({_score,...m}:any)=>`[${m.domain}/${m.memory_type}/${m.evidence_level??"unclassified"}] ${m.content}`).join("\n");
+  }
   const system=`Eres Emma/Jarvis de Astra Oil & Gas. Responde normalmente en español, directo, preciso y accionable. Tu personalidad es cálida, segura, inteligente y ligeramente juguetona; usa humor seco o un comentario simpático solo cuando encaje, nunca cuando reduzca claridad. No hagas discursos ni repitas lo obvio.
 
 Velocidad y costo son requisitos de arquitectura: usa primero contexto disponible, memoria, caché y herramientas deterministas; evita llamadas de IA innecesarias. El objetivo operativo es máximo rendimiento a 0 pesos y mínima latencia. Cuando una respuesta pueda resolverse sin modelo, hazlo.
