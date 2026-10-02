@@ -59,6 +59,18 @@ async function saveMemory(db:any,userId:string,message:string){const remember=/\
 async function logProvider(db:any,userId:string,provider:string,model:string,status:string,errorCode:string|null,latency:number|null){
   await db.from("jarvis_provider_events").insert({user_id:userId,provider,model,status,error_code:errorCode,latency_ms:latency});
 }
+async function loadEmmaCoreContext(db:any,userId:string,message:string){
+  const tokens=[...new Set((message.toLowerCase().match(/[a-záéíóúñ0-9]{3,}/gi)||[]).filter(x=>!["que","como","para","con","los","las","del","una","por","qué","quiero","tengo","este","esta","esto","desde","ahora"].includes(x)))].slice(0,8);
+  const graphOr=tokens.map(t=>"search_text.ilike.%"+t.replace(/[%_]/g,"\\async function logProvider(db:any,userId:string,provider:string,model:string,status:string,errorCode:string|null,latency:number|null){
+  await db.from("jarvis_provider_events").insert({user_id:userId,provider,model,status,error_code:errorCode,latency_ms:latency});
+}")+"%").join(",");
+  const [global,graph,facts]=await Promise.all([
+    db.from("jarvis_global_context").select("context_key,content,importance,updated_at").eq("active",true).order("importance",{ascending:false}).order("updated_at",{ascending:false}).limit(8),
+    graphOr?db.from("emma_graph_nodes").select("node_key,entity_type,label,search_text,properties,updated_at").eq("active",true).or(graphOr).order("updated_at",{ascending:false}).limit(24):Promise.resolve({data:[]}),
+    db.from("emma_knowledge_facts").select("subject_node_key,predicate,object_text,fact_date,evidence_level,confidence,status,source_type,source_ref,updated_at").eq("user_id",userId).eq("status","active").order("updated_at",{ascending:false}).limit(40)
+  ]);
+  return {global_context:global.data||[],graph:(graph.data||[]).map((x:any)=>({node_key:x.node_key,entity_type:x.entity_type,label:x.label,properties:x.properties,updated_at:x.updated_at})),knowledge_facts:facts.data||[]};
+}
 
 Deno.serve(async(req:Request)=>{
   const headers=cors(req);
@@ -80,6 +92,8 @@ Deno.serve(async(req:Request)=>{
   const message=typeof body.message==="string"?body.message.trim():"";
   const suppliedContext=body.context?JSON.stringify(body.context).slice(0,12000):"";
   const researchSources=Array.isArray((body.context as any)?.research_sources)?(body.context as any).research_sources:[];
+  let coreContext:any={global_context:[],graph:[],knowledge_facts:[]};
+  try{coreContext=await loadEmmaCoreContext(db,userId,message);}catch(error){console.error("core_context_failed",error instanceof Error?error.message:"unknown");}
   const sessionId=typeof body.session_id==="string"?body.session_id.slice(0,120):null;
   const persistenceClass=classifyPersistence(message);
   if(researchSources.length){
@@ -122,6 +136,9 @@ Core de Leonardo: convertir información en inteligencia verificada, estructura 
 
 Memoria relevante disponible:
 ${memories||"(sin memoria dinámica registrada)"}
+
+Emma Global Core — primero usa esta capa persistente antes de depender de contexto externo:
+${JSON.stringify(coreContext).slice(0,14000)}
 
 Contexto global/procurement proporcionado por el núcleo:
 ${suppliedContext||"(sin contexto adicional)"}
