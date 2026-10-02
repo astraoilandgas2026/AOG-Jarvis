@@ -1,5 +1,6 @@
 export const TOOL_REGISTRY=Object.freeze({
- "emma.graph":{id:"emma.graph",label:"Emma Knowledge Graph",module:"emma",permission:"read",functionName:"jarvis-tool",description:"Consulta el grafo persistente de Emma y sus relaciones con evidencia."},\n "emma.research.save":{id:"emma.research.save",label:"Guardar investigación",module:"emma",permission:"write",functionName:"jarvis-tool",description:"Persiste evidencia externa con fuente, fecha, hash y entidades resueltas."},
+ "emma.graph":{id:"emma.graph",label:"Emma Knowledge Graph",module:"emma",permission:"read",functionName:"jarvis-tool",description:"Consulta el grafo persistente de Emma y sus relaciones con evidencia."},
+ "emma.research.save":{id:"emma.research.save",label:"Guardar investigación",module:"emma",permission:"write",functionName:"jarvis-tool",description:"Persiste evidencia externa con fuente, fecha, hash y entidades resueltas."},
  "emma.entity.resolve":{id:"emma.entity.resolve",label:"Resolver entidad",module:"emma",permission:"read",functionName:"jarvis-tool",description:"Resuelve nombres, alias y entidades canónicas sin duplicarlas."},
  "emma.entity.seed":{id:"emma.entity.seed",label:"Sincronizar alias",module:"emma",permission:"write",functionName:"jarvis-tool",description:"Sincroniza alias canónicos desde el grafo persistente."},
  "emma.core":{id:"emma.core",label:"Emma Global Core",module:"emma",permission:"read",functionName:"jarvis-tool",description:"Consulta primero el núcleo persistente: grafo, hechos, investigación, memoria, tareas y automatizaciones."},
