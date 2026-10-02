@@ -126,15 +126,6 @@ Deno.serve(async(req:Request)=>{
    });
    return json({ok:true,user_id:userData.user.id,tool,data:saved},200,h);
  }
- if(tool==="emma.research.search"){
-   const term=q.toLowerCase();
-   const {data,error}=await db.from("emma_research_sources").select("id,source_type,source_ref,source_url,title,content_excerpt,retrieved_at,evidence_level,related_entities,metadata").eq("user_id",userData.user.id).order("retrieved_at",{ascending:false}).limit(Math.min(limit*5,50));
-   if(error)return json({error:"Research search failed",detail:error.message},500,h);
-   const scored=(data||[]).map((x:any)=>{const hay=(String(x.title||"")+" "+String(x.content_excerpt||"")+" "+String(x.source_ref||"")).toLowerCase();const score=term?term.split(/\\s+/).filter(Boolean).reduce((n:t:string)=>n+(hay.includes(t)?1:0),0):0;return {...x,_score:score}}).sort((a:any,b:any)=>b._score-a._score||String(b.retrieved_at).localeCompare(String(a.retrieved_at))).slice(0,limit).map(({_score,...x}:any)=>x);
-   return json({ok:true,user_id:userData.user.id,tool,count:scored.length,data:scored},200,h);
- }
-
-
  if(tool==="astra.context"||tool==="astra.intelligence"||tool==="document.intelligence"||tool==="procurement.intelligence"){
    if(q.length<2)return json({error:"Context query must contain at least 2 characters"},400,h);
    const cacheKey=q.toLowerCase().replace(/\\s+/g," ").trim().slice(0,240)+"|"+limit;
