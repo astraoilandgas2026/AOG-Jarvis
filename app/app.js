@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.105.0";
 import { CONFIG } from "./config.js";
 import { createOrb } from "./modules/orb.js";
 import { createVoice, detectLanguage, normalizeVoiceText } from "./modules/voice.js";
-import { getTool, TOOL_REGISTRY } from "./core/tool-registry.js?v=26";
+import { getTool, TOOL_REGISTRY } from "./core/tool-registry.js?v=27";
 import { classifyIntent } from "./core/intent-router.js?v=26";
 import { normalizeSupplierQuery } from "./core/query-normalizer.js";
 import { formatSupplierIntelligence } from "./modules/supplier-intelligence.js";
