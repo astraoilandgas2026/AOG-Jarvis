@@ -1,4 +1,5 @@
 export const TOOL_REGISTRY=Object.freeze({
+ "execution.plan":{id:"execution.plan",label:"Planificador de ejecución",module:"execution",permission:"read",functionName:null,description:"Construye planes determinísticos de ejecución y evita llamadas innecesarias."},
  "astra.priority":{id:"astra.priority",label:"Prioridad Astra",module:"astra",permission:"read",functionName:"jarvis-tool",description:"Consulta prioridades globales de Astra."},
  "astra.context":{id:"astra.context",label:"Contexto Astra global",module:"astra",permission:"read",functionName:"jarvis-tool",description:"Busca y cruza inteligencia Astra en una sola consulta."},
  "astra.intelligence":{id:"astra.intelligence",label:"Supplier Intelligence",module:"astra",permission:"read",functionName:"jarvis-tool",description:"Orquesta contexto de proveedor, evidencia, DD, ofertas, documentos, relaciones y follow-ups en una sola consulta."},
