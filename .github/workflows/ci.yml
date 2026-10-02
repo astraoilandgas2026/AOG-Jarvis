@@ -1,4 +1,5 @@
 name: Emma CI
+# deterministic verification workflow
 
 on:
   push:
