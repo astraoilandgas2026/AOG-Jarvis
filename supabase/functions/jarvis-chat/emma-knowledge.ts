@@ -31,13 +31,28 @@ export function extractDates(text:string){
   return [...out];
 }
 export async function resolveEntities(db:any,userId:string,text:string){
-  const tokens=tokenize(text);
-  if(!tokens.length)return [];
-  const aliases=tokens.map(t=>normalizeEntity(t)).filter(Boolean);
-  const or=aliases.map(a=>`normalized_alias.eq.${a}`).join(",");
-  const {data,error}=await db.from("emma_entity_aliases").select("canonical_node_key,entity_type,alias,normalized_alias,confidence").eq("active",true).or(`user_id.is.null,user_id.eq.${userId}`).or(or).limit(24);
+  const normalized=normalizeEntity(text),tokens=tokenize(text);
+  if(!normalized||!tokens.length)return [];
+  const {data,error}=await db.from("emma_entity_aliases").select("canonical_node_key,entity_type,alias,normalized_alias,confidence").eq("active",true).or(`user_id.is.null,user_id.eq.${userId}`).limit(3000);
   if(error)throw error;
-  return data||[];
+  const scored=(data||[]).map((e:any)=>{
+    const alias=String(e.normalized_alias||"");if(!alias)return null;
+    const aliasTokens=alias.split(" ").filter(Boolean);
+    const overlap=aliasTokens.filter(t=>tokens.includes(t)).length;
+    const exact=normalized===alias?1:0;
+    const contained=normalized.includes(alias)?1:0;
+    const coverage=aliasTokens.length?overlap/aliasTokens.length:0;
+    const score=exact*120+contained*35+coverage*30+(Number(e.confidence)||0)*10;
+    return score>0?{...e,_score:score}:null;
+  }).filter(Boolean).sort((a:any,b:any)=>b._score-a._score);
+  const seen=new Set<string>(),out:any[]=[];
+  for(const e of scored){
+    const key=`${e.canonical_node_key}|${e.entity_type}`;
+    if(seen.has(key))continue;
+    seen.add(key);out.push({canonical_node_key:e.canonical_node_key,entity_type:e.entity_type,alias:e.alias,normalized_alias:e.normalized_alias,confidence:Number(e.confidence)||0});
+    if(out.length>=12)break;
+  }
+  return out;
 }
 export async function ensureEntityAliases(db:any,userId:string){
   const {data:nodes,error}=await db.from("emma_graph_nodes").select("node_key,entity_type,label").eq("active",true).not("label","is",null).limit(2000);
