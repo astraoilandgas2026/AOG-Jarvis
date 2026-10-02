@@ -140,14 +140,14 @@ if(intent.tool==="gmail.read"){const data=await invokeGoogle("gmail.list",{query
 if(intent.type==="action"&&intent.tool==="gmail.send"){const m=q.match(/(?:gmail.*?)(?:a|para)\s+([^\s]+).*?(?:asunto|subject)\s*[:=-]\s*(.+?)\s+(?:cuerpo|body|mensaje)\s*[:=-]\s*([\s\S]+)$/i);if(!m)throw new Error("Formato: Gmail a EMAIL asunto: ASUNTO cuerpo: MENSAJE");if(!window.confirm(`Enviar Gmail a ${m[1]}?\n\nAsunto: ${m[2]}`)){addMessage("assistant","Envío cancelado.");return}const data=await invokeGoogle("gmail.send",{to:m[1],subject:m[2].trim(),text:m[3].trim()});result.textContent=JSON.stringify(data,null,2);addMessage("assistant",data?.sent?"Gmail enviado.":"No se confirmó el envío.");speak(data?.sent?"Gmail enviado.":"No se confirmó el envío.");return}
 if(intent.tool==="calendar.read"){const data=await invokeGoogle("calendar.list",{});result.textContent=JSON.stringify(data,null,2);const reply=data?.count?`Encontré ${data.count} eventos en tu calendario.`:"No hay eventos en el período consultado.";addMessage("assistant",reply);speak(reply);return}
 if(intent.type==="action"&&intent.tool==="calendar.create"){
- const m=q.match(/(?:calendario|calendar).*?(?:el|para)?\\s*(\\d{1,2})[\\/.-](\\d{1,2})(?:[\\/.-](20\\d{2}))?.*?(?:a las|a la|at)\\s*(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm)?/i);
+ const m=q.match(/(?:calendario|calendar).*?(?:el|para)?\s*(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](20\d{2}))?.*?(?:a las|a la|at)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
  if(!m)throw new Error("Formato: calendario DD/MM/YYYY a las HH:MM");
  const day=Number(m[1]),month=Number(m[2])-1,year=Number(m[3]||new Date().getFullYear()),hourRaw=Number(m[4]),minute=Number(m[5]||0),ampm=(m[6]||"").toLowerCase();
  let hour=hourRaw;if(ampm==="pm"&&hour<12)hour+=12;if(ampm==="am"&&hour===12)hour=0;
  const start=new Date(year,month,day,hour,minute);if(Number.isNaN(start.getTime()))throw new Error("Fecha/hora inválida.");
  const end=new Date(start.getTime()+60*60*1000);
- if(!window.confirm("Crear evento en Google Calendar?\\n\\n"+start.toLocaleString("es-CL")+"\\n"+q)){addMessage("assistant","Creación cancelada.");return}
- const data=await invokeGoogle("calendar.create",{summary:q.replace(/^.*?(?:calendario|calendar)\\s*/i,"").slice(0,160)||"Emma",start:start.toISOString(),end:end.toISOString()});
+ if(!window.confirm("Crear evento en Google Calendar?\n\n"+start.toLocaleString("es-CL")+"\n"+q)){addMessage("assistant","Creación cancelada.");return}
+ const data=await invokeGoogle("calendar.create",{summary:q.replace(/^.*?(?:calendario|calendar)\s*/i,"").slice(0,160)||"Emma",start:start.toISOString(),end:end.toISOString()});
  result.textContent=JSON.stringify(data,null,2);const reply=data?.created?"Evento creado en Google Calendar.":"No se confirmó la creación del evento.";addMessage("assistant",reply);speak(reply);return;
 }
 if(intent.type==="action"&&intent.task==="generate_document"){const {generateDocument,renderArtifact}=await import("./modules/documents.js");const format=/pptx|powerpoint/i.test(q)?"pptx":/word|docx/i.test(q)?"docx":"pdf";const body=q.replace(/^(emma[,\s]?\s*)?(crea|genera|hazme|prepara)\s*/i,"");const artifact=await generateDocument({format,title:"Documento Emma",body});renderArtifact(result,artifact);await addArtifactMessage(artifact);addMessage("assistant","Listo. Generé el documento y lo dejé aquí mismo.");speak("Listo. Generé el documento.");return}
