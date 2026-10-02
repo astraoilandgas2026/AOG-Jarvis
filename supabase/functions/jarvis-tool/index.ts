@@ -13,7 +13,10 @@ const allowed={
   contacts:"id,supplier_id,name,title,email,phone,whatsapp,is_primary,notes,created_at",
   products:"id,supplier_id,name,feedstock_type,origin,composition,available_volume,unit,verification_status,created_at,updated_at,commodity_category",
   timeline:"id,supplier_id,event_type,title,description,actor,event_date,created_at",
-  followups:"id,supplier_id,title,description,responsible_person,due_date,priority,status,created_at,updated_at"
+  followups:"id,supplier_id,title,description,responsible_person,due_date,priority,status,created_at,updated_at",
+  certifications:"id,supplier_id,cert_type,cert_number,status,issue_date,expiration_date,issuing_body,notes,created_at",
+  logistics:"id,supplier_id,origin_location,loading_location,port,transport_mode,container_type,estimated_shipment_size,lead_time,export_readiness,notes,created_at,updated_at",
+  technical_specs:"id,product_id,parameter,value,unit,method,verification_status,created_at"
 } as const;
 
 function searchPattern(q:string){
@@ -52,6 +55,9 @@ function buildKnowledgeGraph(data:any){
  for(const x of data.contacts||[]){add("contact:"+x.id,"contact",x.name||x.email||x.id,{});link("supplier:"+x.supplier_id,"contact:"+x.id,"contact");}
  for(const x of data.timeline||[]){add("event:"+x.id,"event",x.title||x.event_type||x.id,{});link("supplier:"+x.supplier_id,"event:"+x.id,"event");}
  for(const x of data.follow_ups||[]){add("followup:"+x.id,"followup",x.title||x.id,{status:x.status});link("supplier:"+x.supplier_id,"followup:"+x.id,"follow_up");}
+ for(const x of data.certifications||[]){add("cert:"+x.id,"certification",x.cert_type||x.id,{status:x.status,expires:x.expiration_date});link("supplier:"+x.supplier_id,"cert:"+x.id,"certification");}
+ for(const x of data.logistics||[]){add("logistics:"+x.id,"logistics",x.port||x.loading_location||x.id,{export_readiness:x.export_readiness});link("supplier:"+x.supplier_id,"logistics:"+x.id,"logistics");}
+ for(const x of data.technical_specs||[]){add("spec:"+x.id,"technical_spec",x.parameter||x.id,{verification:x.verification_status});link("product:"+x.product_id,"spec:"+x.id,"has_spec");}
  return {nodes,edges};
 }
 
@@ -66,12 +72,14 @@ async function unifiedContext(db:any,q:string,limit:number){
   ]);
   const supplierIds=(suppliers as any[]).map(x=>x.id);
   const related=(table:string,columns:string,order:string,cap:number)=>supplierIds.length?db.from(table).select(columns).in("supplier_id",supplierIds).order(order,{ascending:false}).limit(cap):Promise.resolve({data:[]});
-  const [contacts,products,offers,docs,dd,timeline,followups,facts,redFlags]=await Promise.all([
-    related("contacts",allowed.contacts,"created_at",20),related("products",allowed.products,"updated_at",20),related("commercial_offers",allowed.offers,"updated_at",20),related("documents",allowed.documents,"created_at",30),related("due_diligence",allowed.dd,"updated_at",30),related("timeline_events",allowed.timeline,"created_at",30),related("follow_ups",allowed.followups,"created_at",20),
+  const [contacts,products,offers,docs,dd,timeline,followups,certifications,logistics,facts,redFlags]=await Promise.all([
+    related("contacts",allowed.contacts,"created_at",20),related("products",allowed.products,"updated_at",20),related("commercial_offers",allowed.offers,"updated_at",20),related("documents",allowed.documents,"created_at",30),related("due_diligence",allowed.dd,"updated_at",30),related("timeline_events",allowed.timeline,"created_at",30),related("follow_ups",allowed.followups,"created_at",20),related("certifications",allowed.certifications,"created_at",20),related("logistics",allowed.logistics,"updated_at",20),
     supplierIds.length?db.from("intelligence_facts").select("id,domain_id,entity_type,entity_id,field_name,value_text,unit,fact_date,source_type,source_ref,verification_status,is_contradiction,contradiction_key,notes,created_at,updated_at").or(supplierIds.map(id=>`entity_id.eq.${id}`).join(",")).order("updated_at",{ascending:false}).limit(50):Promise.resolve({data:[]}),
     supplierIds.length?db.from("red_flags").select("*").in("supplier_id",supplierIds).order("created_at",{ascending:false}).limit(20):Promise.resolve({data:[]})
   ]);
-  const result={query:q,tokens,suppliers:suppliers||[],domains:domains||[],contacts:contacts.data||[],products:products.data||[],offers:offers.data||[],documents:docs.data||[],due_diligence:dd.data||[],timeline:timeline.data||[],follow_ups:followups.data||[],intelligence_facts:facts.data||[],red_flags:redFlags.data||[]};
+  const productIds=(products.data||[]).map((x:any)=>x.id);
+  const technicalSpecs=productIds.length?await db.from("technical_specs").select(allowed.technical_specs).in("product_id",productIds).order("created_at",{ascending:false}).limit(60):{data:[]};
+  const result={query:q,tokens,suppliers:suppliers||[],domains:domains||[],contacts:contacts.data||[],products:products.data||[],offers:offers.data||[],documents:docs.data||[],due_diligence:dd.data||[],timeline:timeline.data||[],follow_ups:followups.data||[],certifications:certifications.data||[],logistics:logistics.data||[],technical_specs:technicalSpecs.data||[],intelligence_facts:facts.data||[],red_flags:redFlags.data||[]};
   result.knowledge_graph=buildKnowledgeGraph(result);
   return result;
 }
@@ -167,7 +175,7 @@ Deno.serve(async(req:Request)=>{
    const p="%"+q.replace(/[%_]/g,"\\$&")+"%";
    query=db.from("suppliers").select(supplierColumns).or("legal_name.ilike."+p+",trading_name.ilike."+p+",tax_id.ilike."+p).order("updated_at",{ascending:false}).limit(limit);
  }else{
-   const tableMap:any={"astra.dd":"due_diligence","astra.offers":"commercial_offers","astra.documents":"documents","astra.contacts":"contacts","astra.products":"products","astra.timeline":"timeline_events","astra.followups":"follow_ups"};
+   const tableMap:any={"astra.dd":"due_diligence","astra.offers":"commercial_offers","astra.documents":"documents","astra.contacts":"contacts","astra.products":"products","astra.timeline":"timeline_events","astra.followups":"follow_ups","astra.certifications":"certifications","astra.logistics":"logistics"};
    const table=tableMap[tool];
    const columns=(allowed as any)[tool.replace("astra.","")];
    if(!table||!columns)return json({error:"Tool not available"},404,h);
