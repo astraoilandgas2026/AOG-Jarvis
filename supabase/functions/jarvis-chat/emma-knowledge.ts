@@ -75,7 +75,7 @@ function normalizeFactObject(value:string){return normalizeEntity(value).slice(0
 function extractStructuredFacts(text:string,persistence:string,entities:any[],dates:string[]){
   const out:any[]=[];const subject=entities[0]?.canonical_node_key||null;
   const push=(predicate:string,object_text:string,confidence=0.9,fact_date:string|null=null)=>{
-    const object=String(object_text||"").trim().replace(/^[\\s:,-]+|[\\s,.;:!?-]+$/g,"").slice(0,2000);
+    const object=String(object_text||"").trim().replace(/^[\s:,-]+|[\s,.;:!?-]+$/g,"").slice(0,2000);
     if(object)out.push({predicate,object_text:object,object_node_key:null,fact_date,evidence_level:"user_stated",confidence,subject_node_key:subject,metadata:{persistence_class:persistence,entities}});
   };
   if(dates.length)for(const date of dates)push("mentioned_date",date,0.98,date);
@@ -88,12 +88,12 @@ function extractStructuredFacts(text:string,persistence:string,entities:any[],da
   if(persistence==="research")push("research_request",compact,0.90,null);
   if(persistence==="fact"){
     const patterns=[
-      {re:/^(.{2,100}?)\\s+(?:es|son)\\s+(.{2,300})$/i,p:"stated_value"},
-      {re:/^(.{2,100}?)\\s+tiene\\s+(.{2,300})$/i,p:"has"},
-      {re:/(?:precio|price)\\s+(?:de|of)\\s+(.{2,120}?)\\s+(?:es|=)\\s*([\\$€£]?\\s?[0-9][0-9.,]*)/i,p:"price"},
-      {re:/(?:volumen|volume|cantidad)\\s+(?:de|of)?\\s*(.{2,120}?)\\s+(?:es|=)\\s*([0-9][0-9.,]*\\s*(?:mt|kg|ton|tons|toneladas)?)/i,p:"volume"}
+      {re:/^(.{2,100}?)\s+(?:es|son)\s+(.{2,300})$/i,p:"stated_value"},
+      {re:/^(.{2,100}?)\s+tiene\s+(.{2,300})$/i,p:"has"},
+      {re:/(?:precio|price)\s+(?:de|of)\s+(.{2,120}?)\s+(?:es|=)\s*([\$€£]?\s?[0-9][0-9.,]*)/i,p:"price"},
+      {re:/(?:volumen|volume|cantidad)\s+(?:de|of)?\s*(.{2,120}?)\s+(?:es|=)\s*([0-9][0-9.,]*\s*(?:mt|kg|ton|tons|toneladas)?)/i,p:"volume"}
     ];
-    for(const x of patterns){const m=compact.match(x.re);if(m){push(x.p,`${m[1].trim()}: ${m[2].trim()}`,0.92,dates[0]||null);break;}}
+    for(const x of patterns){const m=compact.match(x.re);if(m){push(x.p,m[1].trim()+": "+m[2].trim(),0.92,dates[0]||null);break;}}
   }
   return out;
 }
