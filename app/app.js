@@ -12,6 +12,7 @@ import { buildExecutionPlan } from "./core/execution-plan.js";
 import { planExecution, executionResult } from "./core/execution-orchestrator.js";
 import { automationPlan } from "./core/automation-engine.js";
 import { rankTools, PERFORMANCE_RULE } from "./core/performance-engine.js";
+import { saveSnapshot, loadSnapshot, isOffline } from "./core/offline-core.js";
 const supabase=createClient(CONFIG.supabaseUrl,CONFIG.supabasePublishableKey);
 const $=s=>document.querySelector(s);
 const command=$("#command"),messages=$("#messages"),chat=$("#chat"),home=$("#home");
@@ -29,7 +30,7 @@ function selectModule(key){activeModule=modules[key]?key:"conversation";moduleTi
 function renderSession(session){const signed=Boolean(session?.user);home.classList.remove("hidden");chat.classList.remove("hidden");logout.classList.toggle("hidden",!signed);home.classList.toggle("compact",!signed);if(signed)setStatus("EMMA LISTA");else setStatus("EMMA LISTA · MODO BÁSICO")}
 async function ensureAuth(){const {data,error:sessionError}=await supabase.auth.getSession();if(sessionError)throw new Error("AUTH_SESSION: "+sessionError.message);if(data?.session?.access_token)return data.session;setStatus("CONECTANDO EMMA");const {data:anon,error}=await supabase.auth.signInAnonymously();if(error||!anon?.session)throw new Error("AUTH_ANON: "+(error?.message||"No se pudo autenticar la sesión anónima."));renderSession(anon.session);return anon.session}
 async function invoke(name,body){await ensureAuth();const {data,error}=await supabase.functions.invoke(name,{body});if(!error)return data;let detail="";try{if(error.context){const response=error.context instanceof Response?error.context:null;if(response){const clone=response.clone();try{const payload=await clone.json();detail=payload?.error||payload?.message||JSON.stringify(payload)}catch{detail=await response.text()}}}}catch{}throw new Error((detail||error.message||"Edge Function error").slice(0,800))}
-async function invokeContext(q){return await invokeTool("astra.context",{q,limit:8})}
+async function invokeContext(q){if(isOffline()){const snap=await loadSnapshot();if(snap?.data)return{data:snap.data,offline:true,saved_at:snap.saved_at};throw new Error("OFFLINE_NO_SNAPSHOT")}const data=await invokeTool("astra.context",{q,limit:8});await saveSnapshot(data?.data||data);return data}
 async function getGlobalContext(q){try{return await invokeContext(q)}catch{return null}}
 
 function executionRegistry(){return Object.fromEntries(Object.entries(TOOL_REGISTRY).map(([id,t])=>[id,t]))}
