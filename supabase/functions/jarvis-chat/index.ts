@@ -34,6 +34,24 @@ async function callGemini(apiKey:string,messages:Message[]){
   return {text,latency:Date.now()-started};
 }
 
+
+async function logInteraction(db:any,userId:string,role:"user"|"assistant",content:string,persistenceClass:string,metadata:any={}){
+  if(!content?.trim())return;
+  await db.from("emma_interactions").insert({
+    user_id:userId,role,content:content.slice(0,12000),
+    persistence_class:persistenceClass,source:"conversation",
+    evidence_level:role==="user"?"user_stated":"derived",
+    metadata
+  });
+}
+function classifyPersistence(message:string){
+  if(/\b(recuérd|recuerda|acuérdate|de ahora en adelante|siempre|nunca|prefiero|quiero que)\b/i.test(message))return "memory";
+  if(/\b(decid|acord|confirm|quedamos|cerramos|aprob|rechaz|vamos a)\b/i.test(message))return "decision";
+  if(/\b(reunión|reunion|llamada|follow.?up|fecha|mañana|lunes|martes|miércoles|jueves|viernes|cita)\b/i.test(message))return "commitment";
+  if(/\b(investig|busca|averigua|verifica|comprueba|fuente|internet)\b/i.test(message))return "research";
+  if(/\b(no es|es con|correg|incorrecto|está mal|esta mal|cambia)\b/i.test(message))return "correction";
+  return "raw";
+}
 async function saveMemory(db:any,userId:string,message:string){const remember=/\b(recuerda|acuérdate|acuerdate|de ahora en adelante|siempre|nunca|no vuelvas|prefiero|quiero que|me gusta|llámame|llamame)\b/i.test(message);if(!remember)return;await db.from("jarvis_memory").insert({user_id:userId,domain:"personal",memory_type:"preference",content:message.slice(0,1200),importance:5,source:"conversation",evidence_level:"user_stated",active:true})}
 async function logProvider(db:any,userId:string,provider:string,model:string,status:string,errorCode:string|null,latency:number|null){
   await db.from("jarvis_provider_events").insert({user_id:userId,provider,model,status,error_code:errorCode,latency_ms:latency});
@@ -58,6 +76,9 @@ Deno.serve(async(req:Request)=>{
   try{body=await req.json()}catch{return new Response(JSON.stringify({error:"Invalid JSON body"}),{status:400,headers:{...headers,"Content-Type":"application/json"}})}
   const message=typeof body.message==="string"?body.message.trim():"";
   const suppliedContext=body.context?JSON.stringify(body.context).slice(0,12000):"";
+  const sessionId=typeof body.session_id==="string"?body.session_id.slice(0,120):null;
+  const persistenceClass=classifyPersistence(message);
+  await logInteraction(db,userId,"user",message,persistenceClass,{session_id:sessionId});
   if(!message)return new Response(JSON.stringify({error:"Message required"}),{status:400,headers:{...headers,"Content-Type":"application/json"}});
   const history=(Array.isArray(body.history)?body.history:[]).filter(x=>x&&typeof x.content==="string"&&(x.role==="user"||x.role==="assistant")).slice(-6);
   let memories="";
@@ -107,6 +128,7 @@ ${suppliedContext||"(sin contexto adicional)"}
               const result=await callGroq(apiKey,messages,(chunk)=>controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"delta",text:chunk})}\n\n`)));
               if(!result.text)throw providerError(502,"Empty provider response");
               if(needsMemory)await saveMemory(db,userId,message);
+              await logInteraction(db,userId,"assistant",result.text,"raw",{session_id:sessionId,provider:provider.id,model:provider.model});
               await logProvider(db,userId,provider.id,provider.model,"success",null,result.latency);
               controller.enqueue(encoder.encode("data: [DONE]\\n\\n"));controller.close();
             }catch(error){
@@ -121,6 +143,7 @@ ${suppliedContext||"(sin contexto adicional)"}
       const result=await callGemini(apiKey,messages);
       if(!result.text)throw providerError(502,"Empty provider response");
       await saveMemory(db,userId,message);
+      await logInteraction(db,userId,"assistant",result.text,"raw",{session_id:sessionId,provider:provider.id,model:provider.model});
       await logProvider(db,userId,provider.id,provider.model,"success",null,result.latency);
       return new Response(JSON.stringify({ok:true,user_id:userId,provider:provider.id,model:provider.model,failover:failures.length>0,text:result.text}),{status:200,headers:{...headers,"Content-Type":"application/json"}});    }catch(error){
       const status=(error as any)?.status??502;
