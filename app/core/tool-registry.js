@@ -2,6 +2,8 @@ export const TOOL_REGISTRY=Object.freeze({
  "execution.plan":{id:"execution.plan",label:"Planificador de ejecución",module:"execution",permission:"read",functionName:null,description:"Construye planes determinísticos de ejecución y evita llamadas innecesarias."},
  "execution.orchestrator":{id:"execution.orchestrator",label:"Orquestador de ejecución",module:"execution",permission:"read",functionName:null,description:"Coordina pasos, permisos, confirmaciones y evidencia de ejecución."},
  "automation.plan":{id:"automation.plan",label:"Planificador de recurrencia",module:"automation",permission:"read",functionName:null,description:"Detecta recurrencias diarias, semanales y mensuales sin LLM."},
+ "automation.save":{id:"automation.save",label:"Guardar automatización",module:"automation",permission:"write",functionName:"jarvis-tool",description:"Persiste una automatización recurrente en Supabase."},
+ "automation.list":{id:"automation.list",label:"Listar automatizaciones",module:"automation",permission:"read",functionName:"jarvis-tool",description:"Consulta automatizaciones recurrentes activas."},
  "astra.priority":{id:"astra.priority",label:"Prioridad Astra",module:"astra",permission:"read",functionName:"jarvis-tool",description:"Consulta prioridades globales de Astra."},
  "astra.context":{id:"astra.context",label:"Contexto Astra global",module:"astra",permission:"read",functionName:"jarvis-tool",description:"Busca y cruza inteligencia Astra en una sola consulta."},
  "astra.intelligence":{id:"astra.intelligence",label:"Supplier Intelligence",module:"astra",permission:"read",functionName:"jarvis-tool",description:"Orquesta contexto de proveedor, evidencia, DD, ofertas, documentos, relaciones y follow-ups en una sola consulta."},
