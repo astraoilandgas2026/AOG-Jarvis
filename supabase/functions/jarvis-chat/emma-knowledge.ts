@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 
 const STOP=new Set(["que","como","para","con","los","las","del","una","por","qué","quiero","tengo","este","esta","esto","desde","ahora","pero","tambien","también","sobre","cuando","donde","dónde"]);
 export function normalizeEntity(value:string){return value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim().replace(/\s+/g," ");}
-export function tokenize(text:string){return [...new Set((text.toLowerCase().match(/[a-záéíóúñ0-9]{3,}/gi)||[]).filter(x=>!STOP.has(x)))].slice(0,16);}
+export function tokenize(text:string){return [...new Set((String(text??"").toLowerCase().match(/[a-záéíóúñ0-9]{3,}/gi)||[]).map(x=>normalizeEntity(x)).filter(x=>x&&!STOP.has(x)))].slice(0,24);}
 export function classifyKnowledge(text:string){
   if(/\b(recuérd|recuerda|acuérdate|acuerdate|de ahora en adelante|siempre|nunca|prefiero|quiero que|no vuelvas)\b/i.test(text))return "memory";
   if(/\b(decid|acord|confirm|quedamos|cerramos|aprob|rechaz|vamos a)\b/i.test(text))return "decision";
