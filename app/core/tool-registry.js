@@ -1,4 +1,5 @@
 export const TOOL_REGISTRY=Object.freeze({
+ "emma.graph":{id:"emma.graph",label:"Emma Knowledge Graph",module:"emma",permission:"read",functionName:"jarvis-tool",description:"Consulta el grafo persistente de Emma y sus relaciones con evidencia."},
  "execution.plan":{id:"execution.plan",label:"Planificador de ejecución",module:"execution",permission:"read",functionName:null,description:"Construye planes determinísticos de ejecución y evita llamadas innecesarias."},
  "execution.orchestrator":{id:"execution.orchestrator",label:"Orquestador de ejecución",module:"execution",permission:"read",functionName:null,description:"Coordina pasos, permisos, confirmaciones y evidencia de ejecución."},
  "automation.plan":{id:"automation.plan",label:"Planificador de recurrencia",module:"automation",permission:"read",functionName:null,description:"Detecta recurrencias diarias, semanales y mensuales sin LLM."},
