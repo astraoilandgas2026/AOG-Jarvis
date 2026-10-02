@@ -108,8 +108,10 @@ Deno.serve(async(req:Request)=>{
   if(!message)return new Response(JSON.stringify({error:"Message required"}),{status:400,headers:{...headers,"Content-Type":"application/json"}});
   let interactionId:string|null=null;
   try{
-    interactionId=await logInteraction(db,userId,"user",message,persistenceClass,{session_id:sessionId,persistence_class:semanticPersistence});
-    if(interactionId){const knowledge=await recordInteractionKnowledge(db,userId,interactionId,message,`conversation:${sessionId??"default"}`);if(knowledge?.persistence==="commitment")await persistCommitmentTask(db,userId,message,knowledge.dates||[]);}
+    interactionId=await logInteraction(db,userId,"user",message,persistenceClass,{session_id:sessionId,persistence_class:semanticPersistence,client_date:(body as any).client_date||null});
+    if(interactionId){const clientDate=typeof (body as any).client_date==="string" && /^\d{4}-\d{2}-\d{2}$/.test((body as any).client_date)?(body as any).client_date:null;
+      const baseDate=clientDate?new Date(clientDate+"T12:00:00Z"):new Date();
+      const knowledge=await recordInteractionKnowledge(db,userId,interactionId,message,`conversation:${sessionId??"default"}`,baseDate);if(knowledge?.persistence==="commitment")await persistCommitmentTask(db,userId,message,knowledge.dates||[]);}
   }catch(error){
     console.error("knowledge_loop_failed",error instanceof Error?error.message:"unknown");
   }
