@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
+import { saveResearchSource, resolveEntities, ensureEntityAliases } from "../_shared/emma-knowledge.ts";
 
 const origins=new Set(["https://astraoilandgas2026.github.io","http://localhost:3000","http://localhost:5500","http://127.0.0.1:5500"]);
 const cors=(req:Request)=>{const o=req.headers.get("Origin")??"";return {"Access-Control-Allow-Origin":origins.has(o)?o:"null","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS","Vary":"Origin"}};
@@ -100,6 +101,39 @@ Deno.serve(async(req:Request)=>{
  const memoryId=typeof body.memory_id==="string"?body.memory_id:"";
  const limit=Math.min(Math.max(Number(body.limit)||10,1),20);
  if(!tool)return json({error:"Tool required"},400,h);
+
+ if(tool==="emma.entity.seed"){
+   const count=await ensureEntityAliases(db,userData.user.id);
+   return json({ok:true,tool,seeded:count},200,h);
+ }
+ if(tool==="emma.entity.resolve"){
+   if(q.length<2)return json({error:"Entity query must contain at least 2 characters"},400,h);
+   const data=await resolveEntities(db,userData.user.id,q);
+   return json({ok:true,user_id:userData.user.id,tool,count:data.length,data},200,h);
+ }
+ if(tool==="emma.research.save"){
+   if(q.length<2 && !body.source_ref)return json({error:"Research source content or source_ref required"},400,h);
+   const saved=await saveResearchSource(db,userData.user.id,{
+     source_type:body.source_type||"web",
+     source_ref:body.source_ref||q.slice(0,1000),
+     source_url:body.source_url||null,
+     title:body.title||null,
+     content_excerpt:body.content_excerpt||q,
+     retrieved_at:body.retrieved_at||new Date().toISOString(),
+     evidence_level:body.evidence_level||"documented",
+     related_entities:body.related_entities||[],
+     metadata:body.metadata||{}
+   });
+   return json({ok:true,user_id:userData.user.id,tool,data:saved},200,h);
+ }
+ if(tool==="emma.research.search"){
+   const term=q.toLowerCase();
+   const {data,error}=await db.from("emma_research_sources").select("id,source_type,source_ref,source_url,title,content_excerpt,retrieved_at,evidence_level,related_entities,metadata").eq("user_id",userData.user.id).order("retrieved_at",{ascending:false}).limit(Math.min(limit*5,50));
+   if(error)return json({error:"Research search failed",detail:error.message},500,h);
+   const scored=(data||[]).map((x:any)=>{const hay=(String(x.title||"")+" "+String(x.content_excerpt||"")+" "+String(x.source_ref||"")).toLowerCase();const score=term?term.split(/\\s+/).filter(Boolean).reduce((n:t:string)=>n+(hay.includes(t)?1:0),0):0;return {...x,_score:score}}).sort((a:any,b:any)=>b._score-a._score||String(b.retrieved_at).localeCompare(String(a.retrieved_at))).slice(0,limit).map(({_score,...x}:any)=>x);
+   return json({ok:true,user_id:userData.user.id,tool,count:scored.length,data:scored},200,h);
+ }
+
 
  if(tool==="astra.context"||tool==="astra.intelligence"||tool==="document.intelligence"||tool==="procurement.intelligence"){
    if(q.length<2)return json({error:"Context query must contain at least 2 characters"},400,h);
