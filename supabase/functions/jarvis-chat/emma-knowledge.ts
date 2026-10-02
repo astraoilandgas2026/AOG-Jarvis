@@ -38,11 +38,13 @@ export async function resolveEntities(db:any,userId:string,text:string){
   const scored=(data||[]).map((e:any)=>{
     const alias=String(e.normalized_alias||"");if(!alias)return null;
     const aliasTokens=alias.split(" ").filter(Boolean);
-    const overlap=aliasTokens.filter(t=>tokens.includes(t)).length;
+    const overlap=aliasTokens.filter((t:string)=>tokens.includes(t)).length;
     const exact=normalized===alias?1:0;
     const contained=normalized.includes(alias)?1:0;
     const coverage=aliasTokens.length?overlap/aliasTokens.length:0;
-    const score=exact*120+contained*35+coverage*30+(Number(e.confidence)||0)*10;
+    const canonicalBoost=/^(supplier|product|project|contact|document|offer|dd|certification|logistics):/.test(String(e.canonical_node_key||""))?12:0;
+    const recordPenalty=String(e.entity_type||"").startsWith("record:")?-12:0;
+    const score=exact*120+contained*35+coverage*30+(Number(e.confidence)||0)*10+canonicalBoost+recordPenalty;
     return score>0?{...e,_score:score}:null;
   }).filter(Boolean).sort((a:any,b:any)=>b._score-a._score);
   const seen=new Set<string>(),out:any[]=[];
