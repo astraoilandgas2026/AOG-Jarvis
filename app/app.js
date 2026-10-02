@@ -82,7 +82,29 @@ function fastReply(q){
   return null;
 }
 async function execute(text){const q=text.trim();if(!q)return;command.value="";addMessage("user",q);const quick=fastReply(q);if(quick){addMessage("assistant",quick);speak(quick);return}orb.setState("thinking");const intent=classifyIntent(q);try{
-if(intent.type==="memory_write"){const memoryText=q.replace(/^(?:emma[,\s]*)?(?:recuerda|acuérdate|acuerdate|anota|apunta|guarda|memoriza|no olvides)\s*(?::|-)?\s*/i,"").trim()||q;const data=await invokeTool("memory.write",{q:memoryText,domain:"personal",memory_type:"note",importance:5,source:"emma"});const answer=data?.ok?"Memoria anotada y guardada.":"No se pudo guardar la memoria.";addMessage("assistant",answer);speak(answer);return}\nif(intent.type==="task_create"){const title=parseTaskTitle(q);const dueAt=parseDueAt(q);const data=await invokeTool("personal.task.create",{q:title,due_at:dueAt,priority:/prioridad|urgente|máxima|máximo/i.test(q)?"high":"normal",source:"emma"});const answer=data?.ok?`Pendiente programado: ${data.data?.title||title}.`:"No se pudo programar el pendiente.";addMessage("assistant",answer);speak(answer);return}\nif(intent.type==="task_list"){const data=await invokeTool("personal.task.list",{limit:10});const answer=data?.count?`Tienes ${data.count} pendientes.\n`+data.data.map((t,i)=>`${i+1}. ${t.title}${t.due_at?` — ${new Date(t.due_at).toLocaleString("es-CL")}`:""}`).join("\n"):"No tienes pendientes.";addMessage("assistant",answer);speak(answer);return}
+if(intent.type==="memory_write"){
+ const memoryText=q.replace(/^(?:emma[,\\s]*)?(?:recuerda|acuérdate|acuerdate|anota|apunta|guarda|memoriza|no olvides)\\s*(?::|-)?\\s*/i,"").trim()||q;
+ const data=await invokeTool("memory.write",{q:memoryText,domain:"personal",memory_type:"note",importance:5,source:"emma"});
+ const answer=data?.ok?"Memoria anotada y guardada.":"No se pudo guardar la memoria.";
+ addMessage("assistant",answer);speak(answer);return;
+}
+if(intent.type==="task_create"){
+ const title=parseTaskTitle(q);
+ const dueAt=parseDueAt(q);
+ const priority=/prioridad|urgente|máxima|máximo/i.test(q)?"high":"normal";
+ const data=await invokeTool("personal.task.create",{q:title,due_at:dueAt,priority,source:"emma"});
+ const answer=data?.ok?"Pendiente programado: "+(data.data?.title||title)+".":"No se pudo programar el pendiente.";
+ addMessage("assistant",answer);speak(answer);return;
+}
+if(intent.type==="task_list"){
+ const data=await invokeTool("personal.task.list",{limit:10});
+ let answer="No tienes pendientes.";
+ if(data?.count){
+   const rows=data.data.map((t,i)=>{const due=t.due_at?" — "+new Date(t.due_at).toLocaleString("es-CL"):"";return (i+1)+". "+t.title+due;});
+   answer="Tienes "+data.count+" pendientes.\\n"+rows.join("\\n");
+ }
+ addMessage("assistant",answer);speak(answer);return;
+}
 if(intent.tool==="gmail.read"){const data=await invokeGoogle("gmail.list",{query:q.match(/(?:busca|buscar|encuentra)\s+(.+)/i)?.[1]||"in:inbox",max:10});result.textContent=JSON.stringify(data,null,2);const reply=data?.count?`Encontré ${data.count} correos en Gmail.`:"No encontré correos en Gmail.";addMessage("assistant",reply);speak(reply);return}
 if(intent.type==="action"&&intent.tool==="gmail.send"){const m=q.match(/(?:gmail.*?)(?:a|para)\s+([^\s]+).*?(?:asunto|subject)\s*[:=-]\s*(.+?)\s+(?:cuerpo|body|mensaje)\s*[:=-]\s*([\s\S]+)$/i);if(!m)throw new Error("Formato: Gmail a EMAIL asunto: ASUNTO cuerpo: MENSAJE");if(!window.confirm(`Enviar Gmail a ${m[1]}?\n\nAsunto: ${m[2]}`)){addMessage("assistant","Envío cancelado.");return}const data=await invokeGoogle("gmail.send",{to:m[1],subject:m[2].trim(),text:m[3].trim()});result.textContent=JSON.stringify(data,null,2);addMessage("assistant",data?.sent?"Gmail enviado.":"No se confirmó el envío.");speak(data?.sent?"Gmail enviado.":"No se confirmó el envío.");return}
 if(intent.tool==="calendar.read"){const data=await invokeGoogle("calendar.list",{});result.textContent=JSON.stringify(data,null,2);const reply=data?.count?`Encontré ${data.count} eventos en tu calendario.`:"No hay eventos en el período consultado.";addMessage("assistant",reply);speak(reply);return}
