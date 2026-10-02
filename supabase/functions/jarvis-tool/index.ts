@@ -126,6 +126,25 @@ Deno.serve(async(req:Request)=>{
    });
    return json({ok:true,user_id:userData.user.id,tool,data:saved},200,h);
  }
+ if(tool==="emma.core"){
+   const cacheKey="emma.core|"+(q.toLowerCase().replace(/\\s+/g," ").trim().slice(0,240)||"global")+"|"+limit;
+   const {data:cached}=await db.from("jarvis_context_cache").select("payload,expires_at").eq("user_id",userData.user.id).eq("cache_key",cacheKey).gt("expires_at",new Date().toISOString()).maybeSingle();
+   if(cached?.payload)return json({...cached.payload,cache:"hit"},200,h);
+   const tokens=searchPattern(q||"astra");
+   const graphOr=tokens.map(t=>`search_text.ilike.%${t.replace(/[%_]/g,"\\ if(tool==="astra.context"||tool==="astra.intelligence"||tool==="document.intelligence"||tool==="procurement.intelligence"){")}%,label.ilike.%${t.replace(/[%_]/g,"\\ if(tool==="astra.context"||tool==="astra.intelligence"||tool==="document.intelligence"||tool==="procurement.intelligence"){")}%`).join(",");
+   const [graph,facts,research,memory,tasks,automations]=await Promise.all([
+     graphOr?db.from("emma_graph_nodes").select("node_key,entity_type,label,properties,evidence_level,source_table,source_id,updated_at").eq("active",true).or(graphOr).order("updated_at",{ascending:false}).limit(Math.min(limit*6,48)):Promise.resolve({data:[]}),
+     db.from("emma_knowledge_facts").select("subject_node_key,predicate,object_text,object_node_key,fact_date,evidence_level,confidence,status,source_type,source_ref,updated_at").eq("user_id",userData.user.id).eq("status","active").order("updated_at",{ascending:false}).limit(40),
+     db.from("emma_research_sources").select("id,source_type,source_ref,source_url,title,content_excerpt,retrieved_at,evidence_level,related_entities,metadata").eq("user_id",userData.user.id).order("retrieved_at",{ascending:false}).limit(20),
+     db.from("jarvis_memory").select("id,domain,memory_type,content,importance,evidence_level,updated_at").eq("user_id",userData.user.id).eq("active",true).order("updated_at",{ascending:false}).limit(20),
+     db.from("jarvis_tasks").select("id,title,details,due_at,priority,status,created_at,updated_at").eq("user_id",userData.user.id).neq("status","done").order("due_at",{ascending:true,nullsFirst:false}).limit(20),
+     db.from("jarvis_automations").select("id,name,prompt,cadence,cron_expression,enabled,next_run_at,updated_at").eq("user_id",userData.user.id).eq("enabled",true).order("next_run_at",{ascending:true,nullsFirst:false}).limit(20)
+   ]);
+   const response={ok:true,user_id:userData.user.id,tool,count:(graph.data?.length||0)+(facts.data?.length||0),data:{query:q,tokens,graph:graph.data||[],knowledge_facts:facts.data||[],research_sources:research.data||[],memory:memory.data||[],tasks:tasks.data||[],automations:automations.data||[]}};
+   const expiresAt=new Date(Date.now()+5*60*1000).toISOString();
+   await db.from("jarvis_context_cache").upsert({user_id:userData.user.id,cache_key:cacheKey,query_text:q.slice(0,1000),payload:response,expires_at:expiresAt,updated_at:new Date().toISOString()},{onConflict:"user_id,cache_key"});
+   return json({...response,cache:"miss"},200,h);
+ }
  if(tool==="astra.context"||tool==="astra.intelligence"||tool==="document.intelligence"||tool==="procurement.intelligence"){
    if(q.length<2)return json({error:"Context query must contain at least 2 characters"},400,h);
    const cacheKey=q.toLowerCase().replace(/\\s+/g," ").trim().slice(0,240)+"|"+limit;
