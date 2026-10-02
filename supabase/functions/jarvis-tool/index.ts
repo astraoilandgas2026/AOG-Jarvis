@@ -89,7 +89,7 @@ Deno.serve(async(req:Request)=>{
  const limit=Math.min(Math.max(Number(body.limit)||10,1),20);
  if(!tool)return json({error:"Tool required"},400,h);
 
- if(tool==="astra.context"){
+ if(tool==="astra.context"||tool==="astra.intelligence"){
    if(q.length<2)return json({error:"Context query must contain at least 2 characters"},400,h);
    const cacheKey=q.toLowerCase().replace(/\\s+/g," ").trim().slice(0,240)+"|"+limit;
    const {data:cached}=await db.from("jarvis_context_cache").select("payload,expires_at").eq("user_id",userData.user.id).eq("cache_key",cacheKey).gt("expires_at",new Date().toISOString()).maybeSingle();
