@@ -105,7 +105,7 @@ export async function recordInteractionKnowledge(db:any,userId:string,interactio
     const {data:existing,error:findError}=await db.from("emma_knowledge_facts").select("id,status,object_text,subject_node_key,predicate,fact_date").eq("user_id",userId).eq("status","active").eq("subject_node_key",draft.subject_node_key).eq("predicate",draft.predicate).limit(50);
     if(findError)throw findError;
     if((existing||[]).some((x:any)=>factKey(x)===factKey(draft))){deduplicated++;continue;}
-    if(persistence==="correction"||persistence==="fact"){
+    if((persistence==="correction"||persistence==="fact")&&draft.subject_node_key){
       for(const old of (existing||[]).filter((x:any)=>normalizeFactObject(x.object_text||"")!==normalizeFactObject(draft.object_text||"")).slice(0,5)){
         const {error}=await db.from("emma_knowledge_facts").update({status:"superseded",updated_at:new Date().toISOString()}).eq("id",old.id).eq("user_id",userId).eq("status","active");
         if(error)throw error;
