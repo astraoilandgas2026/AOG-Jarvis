@@ -60,7 +60,7 @@ Deno.serve(async(req:Request)=>{
 
  if(tool==="astra.context"){
    if(q.length<2)return json({error:"Context query must contain at least 2 characters"},400,h);
-   const data=await unifiedContext(db,q,limit);
+   const data=await unifiedContext(db,q,limit,userData.user.id);
    return json({ok:true,user_id:userData.user.id,tool,count:data.suppliers.length+data.domains.length,data},200,h);
  }
 
