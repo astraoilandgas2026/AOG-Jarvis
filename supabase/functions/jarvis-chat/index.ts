@@ -62,8 +62,6 @@ async function logProvider(db:any,userId:string,provider:string,model:string,sta
 async function loadEmmaCoreContext(db:any,userId:string,message:string){
   const tokens=[...new Set((message.toLowerCase().match(/[a-záéíóúñ0-9]{3,}/gi)||[]).filter(x=>!["que","como","para","con","los","las","del","una","por","qué","quiero","tengo","este","esta","esto","desde","ahora"].includes(x)))].slice(0,8);
   const graphOr=tokens.map(t=>"search_text.ilike.%"+t+"%,label.ilike.%"+t+"%").join(",");
-  await db.from("jarvis_provider_events").insert({user_id:userId,provider,model,status,error_code:errorCode,latency_ms:latency});
-}")+"%").join(",");
   const [global,graph,facts]=await Promise.all([
     db.from("jarvis_global_context").select("context_key,content,importance,updated_at").eq("active",true).order("importance",{ascending:false}).order("updated_at",{ascending:false}).limit(8),
     graphOr?db.from("emma_graph_nodes").select("node_key,entity_type,label,search_text,properties,updated_at").eq("active",true).or(graphOr).order("updated_at",{ascending:false}).limit(24):Promise.resolve({data:[]}),
