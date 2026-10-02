@@ -56,6 +56,13 @@ function classifyPersistence(message:string){
   return "raw";
 }
 async function saveMemory(db:any,userId:string,message:string){const remember=/\b(recuerda|acuérdate|acuerdate|de ahora en adelante|siempre|nunca|no vuelvas|prefiero|quiero que|me gusta|llámame|llamame)\b/i.test(message);if(!remember)return;await db.from("jarvis_memory").insert({user_id:userId,domain:"personal",memory_type:"preference",content:message.slice(0,1200),importance:5,source:"conversation",evidence_level:"user_stated",active:true})}
+async function persistCommitmentTask(db:any,userId:string,message:string,dates:string[]){
+  if(!/\b(tengo|tenemos|queda|quedo|quedó|debo|debemos|haré|hare|haremos|vamos a|agend|program|seguimiento|follow.?up)\b/i.test(message))return;
+  const title=("Follow-up: "+message).slice(0,300);
+  const {data:existing}=await db.from("jarvis_tasks").select("id").eq("user_id",userId).eq("status","open").eq("title",title).limit(1).maybeSingle();
+  if(existing)return;
+  await db.from("jarvis_tasks").insert({user_id:userId,title,details:"Compromiso detectado por Emma. Fecha mencionada: "+(dates.join(", ")||"no especificada")+" .",due_at:null,priority:"normal",status:"open",source:"emma_knowledge"});
+}
 async function logProvider(db:any,userId:string,provider:string,model:string,status:string,errorCode:string|null,latency:number|null){
   await db.from("jarvis_provider_events").insert({user_id:userId,provider,model,status,error_code:errorCode,latency_ms:latency});
 }
@@ -102,7 +109,7 @@ Deno.serve(async(req:Request)=>{
   let interactionId:string|null=null;
   try{
     interactionId=await logInteraction(db,userId,"user",message,persistenceClass,{session_id:sessionId,persistence_class:semanticPersistence});
-    if(interactionId)await recordInteractionKnowledge(db,userId,interactionId,message,`conversation:${sessionId??"default"}`);
+    if(interactionId){const knowledge=await recordInteractionKnowledge(db,userId,interactionId,message,`conversation:${sessionId??"default"}`);if(knowledge?.persistence==="commitment")await persistCommitmentTask(db,userId,message,knowledge.dates||[]);}
   }catch(error){
     console.error("knowledge_loop_failed",error instanceof Error?error.message:"unknown");
   }
