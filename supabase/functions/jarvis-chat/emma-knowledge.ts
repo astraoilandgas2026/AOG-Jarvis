@@ -38,11 +38,13 @@ export async function resolveEntities(db:any,userId:string,text:string){
   const scored=(data||[]).map((e:any)=>{
     const alias=String(e.normalized_alias||"");if(!alias)return null;
     const aliasTokens=alias.split(" ").filter(Boolean);
-    const overlap=aliasTokens.filter(t=>tokens.includes(t)).length;
+    const overlap=aliasTokens.filter((t:string)=>tokens.includes(t)).length;
     const exact=normalized===alias?1:0;
     const contained=normalized.includes(alias)?1:0;
     const coverage=aliasTokens.length?overlap/aliasTokens.length:0;
-    const score=exact*120+contained*35+coverage*30+(Number(e.confidence)||0)*10;
+    const canonicalBoost=/^(supplier|product|project|contact|document|offer|dd|certification|logistics):/.test(String(e.canonical_node_key||""))?12:0;
+    const recordPenalty=String(e.entity_type||"").startsWith("record:")?-12:0;
+    const score=exact*120+contained*35+coverage*30+(Number(e.confidence)||0)*10+canonicalBoost+recordPenalty;
     return score>0?{...e,_score:score}:null;
   }).filter(Boolean).sort((a:any,b:any)=>b._score-a._score);
   const seen=new Set<string>(),out:any[]=[];
@@ -132,4 +134,23 @@ export async function saveResearchSource(db:any,userId:string,input:any){
   for(const e of entities.slice(0,12))facts.push({user_id:userId,subject_node_key:e.canonical_node_key,predicate:"research_source",object_text:row.title||row.source_ref,evidence_level:row.evidence_level,source_type:row.source_type,source_ref:row.source_ref,confidence:Number(e.confidence)||0.9,metadata:{research_source_id:data.id}});
   if(facts.length)await db.from("emma_knowledge_facts").insert(facts);
   return {id:data.id,deduplicated:false,entities,factsCreated:facts.length};
+}
+
+export async function saveResearchBundle(db:any,userId:string,sources:any[]){
+  const results:any[]=[];
+  for(const source of sources.slice(0,12)){
+    if(!source||typeof source!=="object")continue;
+    results.push(await saveResearchSource(db,userId,{
+      source_type:source.source_type||"web",
+      source_ref:source.source_ref||source.source_url||source.title||"research",
+      source_url:source.source_url||null,
+      title:source.title||null,
+      content_excerpt:source.content_excerpt||source.content||"",
+      retrieved_at:source.retrieved_at||new Date().toISOString(),
+      evidence_level:source.evidence_level||"documented",
+      related_entities:source.related_entities||[],
+      metadata:source.metadata||{}
+    }));
+  }
+  return results;
 }
