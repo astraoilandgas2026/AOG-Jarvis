@@ -25,6 +25,7 @@ export function classifyIntent(text=""){
  if(/producto|productos|feedstock|uco|av[uú]/.test(q))return{type:"tool",module:"astra",tool:"astra.products"};
  if(/timeline|historial|último contacto|ultimo contacto/.test(q))return{type:"tool",module:"astra",tool:"astra.timeline"};
  if(/follow.?up|seguimiento|pendiente|próxima acción|proxima accion/.test(q))return{type:"tool",module:"astra",tool:"astra.followups"};
+ if(/qué tenemos|que tenemos|qué sabemos|que sabemos|todo sobre|dame todo|historial completo|estado completo/.test(q)&&/proveedor|olam|renovar|óleos|oleos|supplier/.test(q))return{type:"tool",module:"astra",tool:"astra.intelligence"};
  if(/busca|buscar|encuentra|proveedor|olam|renovar|óleos|oleos|cnpj/.test(q))return{type:"tool",module:"astra",tool:"astra.search_supplier"};
  if(/resume|resumen|resúmeme|analiza|explica/.test(q))return{type:"conversation",module:"conversation",task:"summarize"};
  if(/github|repositorio|repo|archivo del proyecto|código del proyecto/.test(q))return{type:"tool",module:"github",tool:"github.read"};
