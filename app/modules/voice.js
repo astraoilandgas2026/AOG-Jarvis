@@ -1,5 +1,5 @@
 const LANG={es:"es-ES",en:"en-US"};
-function detectLanguage(text=""){const s=text.toLowerCase();const en=/\b(the|and|with|from|please|what|how|why|today|tomorrow|email|supplier|price|offer|hello|hey)\b/i;const es=/\b(el|la|los|las|con|para|qué|como|por|hoy|mañana|correo|proveedor|precio|oferta|hola)\b/i;return en.test(s)&&!es.test(s)?"en":"es"}
+export function detectLanguage(text=""){const s=text.toLowerCase();const en=/\b(the|and|with|from|please|what|how|why|today|tomorrow|email|supplier|price|offer|hello|hey)\b/i;const es=/\b(el|la|los|las|con|para|qué|como|por|hoy|mañana|correo|proveedor|precio|oferta|hola)\b/i;return en.test(s)&&!es.test(s)?"en":"es"}
 function chooseVoice(lang){
  const voices=window.speechSynthesis?.getVoices?.()||[];
  const prefix=lang==="en"?"en":"es";
