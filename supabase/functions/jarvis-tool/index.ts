@@ -66,16 +66,16 @@ Deno.serve(async(req:Request)=>{
 
  if(tool==="memory.write"){
    if(q.length<2)return json({error:"Memory text required"},400,h);
-   const {data,error}=await db.from("jarvis_memory").insert({user_id:userData.user.id,domain:body.domain||"personal",memory_type:body.memory_type||"note",content:q.slice(0,1200),importance:Math.min(Math.max(Number(body.importance)||4,1),5),source:body.source||"conversation",evidence_level:"user_stated",active:true}).select("id,content,importance,created_at").single();
+   const memory={user_id:userData.user.id,domain:body.domain||"personal",memory_type:body.memory_type||"note",content:q.slice(0,1200),importance:Math.min(Math.max(Number(body.importance)||4,1),5),source:body.source||"conversation",evidence_level:"user_stated",active:true}; const {error}=await db.from("jarvis_memory").insert(memory);
    if(error)return json({error:"Memory write failed",detail:error.message},500,h);
-   return json({ok:true,tool,data},200,h);
+   return json({ok:true,tool,data:{content:memory.content,importance:memory.importance}},200,h);
  }
 
  if(tool==="personal.task.create"){
    if(q.length<2)return json({error:"Task title required"},400,h);
-   const {data,error}=await db.from("jarvis_tasks").insert({user_id:userData.user.id,title:q.slice(0,300),details:typeof body.details==="string"?body.details:null,due_at:body.due_at||null,priority:body.priority||"normal",status:"pending",source:body.source||"emma"}).select("id,title,details,due_at,priority,status,created_at").single();
+   const task={user_id:userData.user.id,title:q.slice(0,300),details:typeof body.details==="string"?body.details:null,due_at:body.due_at||null,priority:body.priority||"normal",status:"pending",source:body.source||"emma"}; const {error}=await db.from("jarvis_tasks").insert(task);
    if(error)return json({error:"Task create failed",detail:error.message},500,h);
-   return json({ok:true,tool,data},200,h);
+   return json({ok:true,tool,data:{title:task.title,due_at:task.due_at,priority:task.priority,status:task.status}},200,h);
  }
 
  if(tool==="personal.task.list"){
