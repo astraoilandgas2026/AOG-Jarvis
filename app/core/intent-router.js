@@ -1,9 +1,11 @@
 export function classifyIntent(text=""){
  const q=text.trim().toLowerCase();
  if(!q)return{type:"empty",module:"conversation"};
- if(/(?:recuerda|acuérdate|acuerdate|anota|apunta|guarda|memoriza|no olvides)/.test(q))return{type:"memory_write",module:"memory"};
  if(/(?:recuérdame|recuerdame|recordatorio|alarma|pon una alarma|anota como pendiente|apunta como pendiente|agrega una tarea|añade una tarea)/.test(q))return{type:"task_create",module:"automation"};
  if(/(?:mis tareas|tareas pendientes|mis pendientes|qué tengo pendiente|que tengo pendiente|recordatorios pendientes)/.test(q))return{type:"task_list",module:"automation"};
+ if(/(?:actualiza|cambia|modifica).*(?:memoria|recuerdo)|(?:memoria|recuerdo).*(?:actualiza|cambia|modifica)/.test(q))return{type:"memory_update",module:"memory"};
+ if(/(?:olvida|borra|desactiva).*(?:memoria|recuerdo)|(?:memoria|recuerdo).*(?:olvida|borra|desactiva)/.test(q))return{type:"memory_deactivate",module:"memory"};
+ if(/(?:recuerda|acuérdate|acuerdate|anota|apunta|guarda|memoriza|no olvides)/.test(q))return{type:"memory_write",module:"memory"};
  if(/(?:prioridad|prioridades|astra|belincar|fl óleos|fl oleos|sosa|issc)/.test(q))return{type:"tool",module:"astra",tool:"astra.context"};
  if(/dd|due diligence|diligencia|riesgo/.test(q))return{type:"tool",module:"astra",tool:"astra.dd"};
  if(/oferta|precio|commercial|incoterm|fob|cif|cfr/.test(q))return{type:"tool",module:"astra",tool:"astra.offers"};
