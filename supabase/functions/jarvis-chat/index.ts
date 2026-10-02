@@ -37,13 +37,15 @@ async function callGemini(apiKey:string,messages:Message[]){
 
 
 async function logInteraction(db:any,userId:string,role:"user"|"assistant",content:string,persistenceClass:string,metadata:any={}){
-  if(!content?.trim())return;
-  await db.from("emma_interactions").insert({
+  if(!content?.trim())return null;
+  const {data,error}=await db.from("emma_interactions").insert({
     user_id:userId,role,content:content.slice(0,12000),
     persistence_class:persistenceClass,source:"conversation",
     evidence_level:role==="user"?"user_stated":"derived",
     metadata
-  });
+  }).select("id").single();
+  if(error)throw error;
+  return data?.id??null;
 }
 function classifyPersistence(message:string){
   if(/\b(recuérd|recuerda|acuérdate|de ahora en adelante|siempre|nunca|prefiero|quiero que)\b/i.test(message))return "memory";
@@ -78,9 +80,16 @@ Deno.serve(async(req:Request)=>{
   const message=typeof body.message==="string"?body.message.trim():"";
   const suppliedContext=body.context?JSON.stringify(body.context).slice(0,12000):"";
   const sessionId=typeof body.session_id==="string"?body.session_id.slice(0,120):null;
-  const persistenceClass=classifyPersistence(message);\n  const semanticPersistence=classifyKnowledge(message);
-  await logInteraction(db,userId,"user",message,persistenceClass,{session_id:sessionId});
-  if(!message)return new Response(JSON.stringify({error:"Message required"}),{status:400,headers:{...headers,"Content-Type":"application/json"}});\n  let interactionId:string|null=null;\n  try{\n    interactionId=await logInteraction(db,userId,"user",message,persistenceClass,{session_id:sessionId});\n    if(interactionId)await recordInteractionKnowledge(db,userId,interactionId,message,`conversation:${sessionId??"default"}`);\n  }catch(error){\n    console.error("knowledge_loop_failed",error instanceof Error?error.message:"unknown");\n  }
+  const persistenceClass=classifyPersistence(message);
+  const semanticPersistence=classifyKnowledge(message);
+  if(!message)return new Response(JSON.stringify({error:"Message required"}),{status:400,headers:{...headers,"Content-Type":"application/json"}});
+  let interactionId:string|null=null;
+  try{
+    interactionId=await logInteraction(db,userId,"user",message,persistenceClass,{session_id:sessionId,persistence_class:semanticPersistence});
+    if(interactionId)await recordInteractionKnowledge(db,userId,interactionId,message,`conversation:${sessionId??"default"}`);
+  }catch(error){
+    console.error("knowledge_loop_failed",error instanceof Error?error.message:"unknown");
+  }
   const history=(Array.isArray(body.history)?body.history:[]).filter(x=>x&&typeof x.content==="string"&&(x.role==="user"||x.role==="assistant")).slice(-6);
   let memories="";
   const needsMemory=!/^(hola|holi|buenas|buenos días|buenas tardes|buenas noches|hey|hello|gracias|ok|okay|perfecto|listo)[!.?,\s]*$/i.test(message);
