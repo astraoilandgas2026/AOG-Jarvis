@@ -133,3 +133,22 @@ export async function saveResearchSource(db:any,userId:string,input:any){
   if(facts.length)await db.from("emma_knowledge_facts").insert(facts);
   return {id:data.id,deduplicated:false,entities,factsCreated:facts.length};
 }
+
+export async function saveResearchBundle(db:any,userId:string,sources:any[]){
+  const results:any[]=[];
+  for(const source of sources.slice(0,12)){
+    if(!source||typeof source!=="object")continue;
+    results.push(await saveResearchSource(db,userId,{
+      source_type:source.source_type||"web",
+      source_ref:source.source_ref||source.source_url||source.title||"research",
+      source_url:source.source_url||null,
+      title:source.title||null,
+      content_excerpt:source.content_excerpt||source.content||"",
+      retrieved_at:source.retrieved_at||new Date().toISOString(),
+      evidence_level:source.evidence_level||"documented",
+      related_entities:source.related_entities||[],
+      metadata:source.metadata||{}
+    }));
+  }
+  return results;
+}
