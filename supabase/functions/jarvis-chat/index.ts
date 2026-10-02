@@ -92,7 +92,7 @@ Deno.serve(async(req:Request)=>{
     userId=typeof payload?.sub==="string"?payload.sub:"";
   }catch{}
   if(!userId)return new Response(JSON.stringify({error:"Invalid authentication"}),{status:401,headers:{...headers,"Content-Type":"application/json"}});
-  let body:{message?:string;history?:Array<{role:"user"|"assistant";content:string}>;context?:unknown};
+  let body:{message?:string;history?:Array<{role:"user"|"assistant";content:string}>;context?:unknown;session_id?:string;client_date?:string};
   try{body=await req.json()}catch{return new Response(JSON.stringify({error:"Invalid JSON body"}),{status:400,headers:{...headers,"Content-Type":"application/json"}})}
   const message=typeof body.message==="string"?body.message.trim():"";
   const suppliedContext=body.context?JSON.stringify(body.context).slice(0,12000):"";
@@ -171,7 +171,7 @@ ${suppliedContext||"(sin contexto adicional)"}
               controller.enqueue(encoder.encode("data: [DONE]\\n\\n"));controller.close();
             }catch(error){
               const status=(error as any)?.status??502;
-              await logProvider(db,userId,provider.id,provider.model,"failed",String(status),null,null);
+              await logProvider(db,userId,provider.id,provider.model,"failed",String(status),null);
               controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"error",message:error instanceof Error?error.message:"Provider error"})}\n\n`));controller.close();
             }
           }
