@@ -73,7 +73,7 @@ Deno.serve(async(req:Request)=>{
 
  if(tool==="personal.task.create"){
    if(q.length<2)return json({error:"Task title required"},400,h);
-   const task={user_id:userData.user.id,title:q.slice(0,300),details:typeof body.details==="string"?body.details:null,due_at:body.due_at||null,priority:body.priority||"normal",status:"pending",source:body.source||"emma"}; const {error}=await db.from("jarvis_tasks").insert(task);
+   const task={user_id:userData.user.id,title:q.slice(0,300),details:typeof body.details==="string"?body.details:null,due_at:body.due_at||null,priority:body.priority||"normal",status:"open",source:body.source||"emma"}; const {error}=await db.from("jarvis_tasks").insert(task);
    if(error)return json({error:"Task create failed",detail:error.message},500,h);
    return json({ok:true,tool,data:{title:task.title,due_at:task.due_at,priority:task.priority,status:task.status}},200,h);
  }
