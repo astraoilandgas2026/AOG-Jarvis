@@ -46,8 +46,8 @@ async function orchestrateQuery(q){
    :executionResult(ctx,{id:planned[i].id,status:"error",error:r.reason?.message||"Tool failed",source:getTool(planned[i].id)?.functionName||"local"}).steps.find(s=>s.id===planned[i].id));
  return{status:steps.some(s=>s.status==="error")?"partial":"completed",kind,performance_rule:PERFORMANCE_RULE,steps,results:settled.map((r,i)=>({tool:planned[i].id,status:r.status,data:r.status==="fulfilled"?r.value.data:undefined,error:r.status==="rejected"?(r.reason?.message||"Tool failed"):undefined}))};
 }
-function parseDueAt(q){const rel=q.match(/en\\s+(\\d+)\\s*(minutos?|horas?)/i);if(!rel)return null;const d=new Date();d.setMinutes(d.getMinutes()+Number(rel[1])*(rel[2].toLowerCase().startsWith("hora")?60:1));return d.toISOString()}
-function parseTaskTitle(q){return q.replace(/^(?:emma[,\\s]*)?(?:pon|crea|agrega|añade|anota|apunta|programa|recuérdame|recuerdame|alarma|recordatorio)\\s*/i,"").trim()||q}
+function parseDueAt(q){const rel=q.match(/en\s+(\d+)\s*(minutos?|horas?)/i);if(!rel)return null;const d=new Date();d.setMinutes(d.getMinutes()+Number(rel[1])*(rel[2].toLowerCase().startsWith("hora")?60:1));return d.toISOString()}
+function parseTaskTitle(q){return q.replace(/^(?:emma[,\s]*)?(?:pon|crea|agrega|añade|anota|apunta|programa|recuérdame|recuerdame|alarma|recordatorio)\s*/i,"").trim()||q}
 async function invokeChat(q,context=null){
   await ensureAuth();
   const session=(await supabase.auth.getSession()).data.session;
