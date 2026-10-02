@@ -131,7 +131,7 @@ Deno.serve(async(req:Request)=>{
    const {data:cached}=await db.from("jarvis_context_cache").select("payload,expires_at").eq("user_id",userData.user.id).eq("cache_key",cacheKey).gt("expires_at",new Date().toISOString()).maybeSingle();
    if(cached?.payload)return json({...cached.payload,cache:"hit"},200,h);
    const tokens=searchPattern(q||"astra");
-   const graphOr=tokens.map(t=>`search_text.ilike.%${t.replace(/[%_]/g,"\\ if(tool==="astra.context"||tool==="astra.intelligence"||tool==="document.intelligence"||tool==="procurement.intelligence"){")}%,label.ilike.%${t.replace(/[%_]/g,"\\ if(tool==="astra.context"||tool==="astra.intelligence"||tool==="document.intelligence"||tool==="procurement.intelligence"){")}%`).join(",");
+   const graphOr=tokens.map(t=>"search_text.ilike.%"+t.replace(/[%_]/g,"\\$&")+"%,label.ilike.%"+t.replace(/[%_]/g,"\\$&")+"%").join(",");
    const [graph,facts,research,memory,tasks,automations]=await Promise.all([
      graphOr?db.from("emma_graph_nodes").select("node_key,entity_type,label,properties,evidence_level,source_table,source_id,updated_at").eq("active",true).or(graphOr).order("updated_at",{ascending:false}).limit(Math.min(limit*6,48)):Promise.resolve({data:[]}),
      db.from("emma_knowledge_facts").select("subject_node_key,predicate,object_text,object_node_key,fact_date,evidence_level,confidence,status,source_type,source_ref,updated_at").eq("user_id",userData.user.id).eq("status","active").order("updated_at",{ascending:false}).limit(40),
