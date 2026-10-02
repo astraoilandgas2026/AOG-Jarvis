@@ -2,19 +2,19 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.105.0";
 import { CONFIG } from "./config.js";
 import { createOrb } from "./modules/orb.js";
 import { createVoice } from "./modules/voice.js";
-import { getTool } from "./core/tool-registry.js?v=24";
-import { classifyIntent } from "./core/intent-router.js?v=24";
+import { getTool } from "./core/tool-registry.js?v=26";
+import { classifyIntent } from "./core/intent-router.js?v=26";
 import { normalizeSupplierQuery } from "./core/query-normalizer.js";
 const supabase=createClient(CONFIG.supabaseUrl,CONFIG.supabasePublishableKey);
 const $=s=>document.querySelector(s);
 const command=$("#command"),messages=$("#messages"),chat=$("#chat"),home=$("#home");
-const logout=$("#logout"),install=$("#install"),result=$("#result");
+const logout=$("#logout"),install=$("#install"),result=$("#result")||document.createElement("pre");
 let voice=null;
 const orb=createOrb({root:$("#orb"),status:$("#orb-status"),onActivate:()=>voice?.start()});
 voice=createVoice({orb,onTranscript:t=>{command.value=t;execute(t)},onError:e=>setStatus(e)});
 let deferredInstall=null,history=[];
 function setStatus(text){$("#orb-status").textContent=text}
-function speak(text){if(!("speechSynthesis"in window))return;window.speechSynthesis.cancel();orb.setState("speaking");const u=new SpeechSynthesisUtterance(text);u.lang="es-ES";u.rate=.98;u.onend=()=>orb.setState("idle");window.speechSynthesis.speak(u)}
+function speak(text){if(new URLSearchParams(location.search).has("e2e"))return;if(!("speechSynthesis"in window))return;window.speechSynthesis.cancel();orb.setState("speaking");const u=new SpeechSynthesisUtterance(text);u.lang="es-ES";u.rate=.98;u.onend=()=>orb.setState("idle");window.speechSynthesis.speak(u)}
 function addMessage(role,text){const el=document.createElement("div");el.className="message "+role;el.textContent=text;messages.appendChild(el);messages.scrollTop=messages.scrollHeight}
 async function addArtifactMessage(artifact){const {renderArtifact}=await import("./modules/documents.js");const el=document.createElement("div");el.className="message assistant artifact-message";const card=document.createElement("div");renderArtifact(card,artifact);el.appendChild(card);messages.appendChild(el);messages.scrollTop=messages.scrollHeight}
 function renderModules(){modulesNav.innerHTML="";Object.entries(modules).forEach(([key,m])=>{const b=document.createElement("button");b.textContent=m.label;b.dataset.module=key;b.className=key===activeModule?"active":"";b.onclick=()=>selectModule(key);modulesNav.appendChild(b)})}
@@ -81,8 +81,30 @@ function fastReply(q){
   if(/^(hola|holi|hey|hello|buenas)[!.?,\s]*$/i.test(q))return "Hola, Leíto. Aquí estoy.";
   return null;
 }
-async function execute(text){const q=text.trim();if(!q)return;command.value="";addMessage("user",q);const quick=fastReply(q);if(quick){addMessage("assistant",quick);speak(quick);return}orb.setState("thinking");const intent=classifyIntent(q);try{
-if(intent.type==="memory_write"||intent.type==="task_create"||intent.type==="task_list"){const answer=await invokeChat(q);addMessage("assistant",answer);speak(answer);return}
+async function execute(text){const q=text.trim();if(!q)return;command.value="";addMessage("user",q);const quick=fastReply(q);if(quick){addMessage("assistant",quick);speak(quick);return}orb.setState("thinking");try{const explicitMemory=/(?:recuerda|acuérdate|acuerdate|anota|apunta|guarda|memoriza|no olvides)/i.test(q);const explicitTask=/(?:recuérdame|recuerdame|recordatorio|alarma|pon una alarma|anota como pendiente|apunta como pendiente|agrega una tarea|añade una tarea)/i.test(q);const explicitTaskList=/(?:mis tareas|tareas pendientes|mis pendientes|qué tengo pendiente|que tengo pendiente|recordatorios pendientes)/i.test(q);const intent=explicitMemory?{type:"memory_write",module:"memory"}:explicitTask?{type:"task_create",module:"automation"}:explicitTaskList?{type:"task_list",module:"automation"}:classifyIntent(q);
+if(intent.type==="memory_write"){
+ const memoryText=q.replace(/^(?:emma[,\\s]*)?(?:recuerda|acuérdate|acuerdate|anota|apunta|guarda|memoriza|no olvides)\\s*(?::|-)?\\s*/i,"").trim()||q;
+ const data=await invokeTool("memory.write",{q:memoryText,domain:"personal",memory_type:"note",importance:5,source:"emma"});
+ const answer=data?.ok?"Memoria anotada y guardada.":"No se pudo guardar la memoria.";
+ addMessage("assistant",answer);speak(answer);return;
+}
+if(intent.type==="task_create"){
+ const title=parseTaskTitle(q);
+ const dueAt=parseDueAt(q);
+ const priority=/prioridad|urgente|máxima|máximo/i.test(q)?"high":"normal";
+ const data=await invokeTool("personal.task.create",{q:title,due_at:dueAt,priority,source:"emma"});
+ const answer=data?.ok?"Pendiente programado: "+(data.data?.title||title)+".":"No se pudo programar el pendiente.";
+ addMessage("assistant",answer);speak(answer);return;
+}
+if(intent.type==="task_list"){
+ const data=await invokeTool("personal.task.list",{limit:10});
+ let answer="No tienes pendientes.";
+ if(data?.count){
+   const rows=data.data.map((t,i)=>{const due=t.due_at?" — "+new Date(t.due_at).toLocaleString("es-CL"):"";return (i+1)+". "+t.title+due;});
+   answer="Tienes "+data.count+" pendientes.\\n"+rows.join("\\n");
+ }
+ addMessage("assistant",answer);speak(answer);return;
+}
 if(intent.tool==="gmail.read"){const data=await invokeGoogle("gmail.list",{query:q.match(/(?:busca|buscar|encuentra)\s+(.+)/i)?.[1]||"in:inbox",max:10});result.textContent=JSON.stringify(data,null,2);const reply=data?.count?`Encontré ${data.count} correos en Gmail.`:"No encontré correos en Gmail.";addMessage("assistant",reply);speak(reply);return}
 if(intent.type==="action"&&intent.tool==="gmail.send"){const m=q.match(/(?:gmail.*?)(?:a|para)\s+([^\s]+).*?(?:asunto|subject)\s*[:=-]\s*(.+?)\s+(?:cuerpo|body|mensaje)\s*[:=-]\s*([\s\S]+)$/i);if(!m)throw new Error("Formato: Gmail a EMAIL asunto: ASUNTO cuerpo: MENSAJE");if(!window.confirm(`Enviar Gmail a ${m[1]}?\n\nAsunto: ${m[2]}`)){addMessage("assistant","Envío cancelado.");return}const data=await invokeGoogle("gmail.send",{to:m[1],subject:m[2].trim(),text:m[3].trim()});result.textContent=JSON.stringify(data,null,2);addMessage("assistant",data?.sent?"Gmail enviado.":"No se confirmó el envío.");speak(data?.sent?"Gmail enviado.":"No se confirmó el envío.");return}
 if(intent.tool==="calendar.read"){const data=await invokeGoogle("calendar.list",{});result.textContent=JSON.stringify(data,null,2);const reply=data?.count?`Encontré ${data.count} eventos en tu calendario.`:"No hay eventos en el período consultado.";addMessage("assistant",reply);speak(reply);return}
@@ -90,7 +112,7 @@ if(intent.type==="action"&&intent.tool==="calendar.create")throw new Error("La c
 if(intent.type==="action"&&intent.task==="generate_document"){const {generateDocument,renderArtifact}=await import("./modules/documents.js");const format=/pptx|powerpoint/i.test(q)?"pptx":/word|docx/i.test(q)?"docx":"pdf";const body=q.replace(/^(emma[,\s]?\s*)?(crea|genera|hazme|prepara)\s*/i,"");const artifact=await generateDocument({format,title:"Documento Emma",body});renderArtifact(result,artifact);await addArtifactMessage(artifact);addMessage("assistant","Listo. Generé el documento y lo dejé aquí mismo.");speak("Listo. Generé el documento.");return}
 if(intent.type==="action"&&intent.tool==="mail.send"){const email=parseSendEmail(q);if(!email)throw new Error("Formato: envía un correo a EMAIL asunto: ASUNTO cuerpo: MENSAJE");if(!window.confirm(`Enviar desde Astra a ${email.to[0]}?\n\nAsunto: ${email.subject}`)){addMessage("assistant","Envío cancelado.");return}const data=await invokeMail("send",email);result.textContent=JSON.stringify(data,null,2);const reply=data?.sent?"Correo enviado desde "+data.mailbox+".":"No se confirmó el envío.";addMessage("assistant",reply);speak(reply);return}
 if(intent.type==="tool"&&intent.tool==="mail.read"){const data=await invokeMail(q.match(/(?:busca|buscar|encuentra)\s+(.+)/i)?.[1]?"search":"list",{q:q.match(/(?:busca|buscar|encuentra)\s+(.+)/i)?.[1]||""});result.textContent=JSON.stringify(data,null,2);const reply=formatMail(data);addMessage("assistant",reply);speak(data?.count?(`Encontré ${data.count} correos.`):reply);return}
-if(intent.type==="tool"&&intent.tool&&intent.tool.startsWith("astra.")){const answer=await invokeChat(q);addMessage("assistant",answer);speak(answer);return}
+if(intent.type==="tool"&&intent.tool&&intent.tool.startsWith("astra.")){const body=intent.tool==="astra.search_supplier"?{q:normalizeSupplierQuery(q),limit:10}:{q,limit:10};const data=await invokeTool(intent.tool,body);result.textContent=JSON.stringify(data,null,2);const answer="Contexto Astra consultado y disponible en resultados para: "+q;addMessage("assistant",answer);speak(answer);return}
 if(intent.type==="tool"&&intent.tool){const data=intent.tool==="github.read"?await invokeGitHub(q):await invokeTool(intent.tool,intent.tool==="astra.search_supplier"?{q:normalizeSupplierQuery(q),limit:10}:{q,limit:10});const output=JSON.stringify(data,null,2);result.textContent=output;let reply;if(intent.tool==="github.read"&&data?.ok&&data?.content)reply="Leí "+(data.path||"el archivo")+" del repositorio. El contenido quedó visible en el panel de resultados.";else reply=data?.count?"Encontré "+data.count+" resultado"+(data.count===1?"":"s")+".":"No encontré resultados.";addMessage("assistant",reply);speak(reply);return}
 const context=await invokeContext(q);const answer=await invokeChat(q,context?.data||context);addMessage("assistant",answer);result.textContent=answer;speak(answer)
 }catch(e){const msg=e?.message||String(e);result.textContent="Error: "+msg;addMessage("assistant","Error real: "+msg);speak("Encontré un error. Revisa el panel de resultados.")}finally{if(orb.getState()==="thinking")orb.setState("idle")}}

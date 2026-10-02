@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 
-const origins=new Set(["https://astraoilandgas2026.github.io","http://localhost:3000","http://localhost:5500"]);
+const origins=new Set(["https://astraoilandgas2026.github.io","http://localhost:3000","http://localhost:5500","http://127.0.0.1:5500"]);
 const cors=(req:Request)=>{const o=req.headers.get("Origin")??"";return {"Access-Control-Allow-Origin":origins.has(o)?o:"null","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS","Vary":"Origin"}};
 const json=(body:unknown,status:number,h:Record<string,string>)=>new Response(JSON.stringify(body),{status,headers:{...h,"Content-Type":"application/json"}});
 
@@ -60,22 +60,22 @@ Deno.serve(async(req:Request)=>{
 
  if(tool==="astra.context"){
    if(q.length<2)return json({error:"Context query must contain at least 2 characters"},400,h);
-   const data=await unifiedContext(db,q,limit);
+   const data=await unifiedContext(db,q,limit,userData.user.id);
    return json({ok:true,user_id:userData.user.id,tool,count:data.suppliers.length+data.domains.length,data},200,h);
  }
 
  if(tool==="memory.write"){
    if(q.length<2)return json({error:"Memory text required"},400,h);
-   const {data,error}=await db.from("jarvis_memory").insert({user_id:userData.user.id,domain:body.domain||"personal",memory_type:body.memory_type||"note",content:q.slice(0,1200),importance:Math.min(Math.max(Number(body.importance)||4,1),5),source:body.source||"conversation",evidence_level:"user_stated",active:true}).select("id,content,importance,created_at").single();
+   const memory={user_id:userData.user.id,domain:body.domain||"personal",memory_type:body.memory_type||"note",content:q.slice(0,1200),importance:Math.min(Math.max(Number(body.importance)||4,1),5),source:body.source||"conversation",evidence_level:"user_stated",active:true}; const {error}=await db.from("jarvis_memory").insert(memory);
    if(error)return json({error:"Memory write failed",detail:error.message},500,h);
-   return json({ok:true,tool,data},200,h);
+   return json({ok:true,tool,data:{content:memory.content,importance:memory.importance}},200,h);
  }
 
  if(tool==="personal.task.create"){
    if(q.length<2)return json({error:"Task title required"},400,h);
-   const {data,error}=await db.from("jarvis_tasks").insert({user_id:userData.user.id,title:q.slice(0,300),details:typeof body.details==="string"?body.details:null,due_at:body.due_at||null,priority:body.priority||"normal",status:"pending",source:body.source||"emma"}).select("id,title,details,due_at,priority,status,created_at").single();
+   const task={user_id:userData.user.id,title:q.slice(0,300),details:typeof body.details==="string"?body.details:null,due_at:body.due_at||null,priority:body.priority||"normal",status:"open",source:body.source||"emma"}; const {error}=await db.from("jarvis_tasks").insert(task);
    if(error)return json({error:"Task create failed",detail:error.message},500,h);
-   return json({ok:true,tool,data},200,h);
+   return json({ok:true,tool,data:{title:task.title,due_at:task.due_at,priority:task.priority,status:task.status}},200,h);
  }
 
  if(tool==="personal.task.list"){

@@ -1,6 +1,9 @@
 import { test, expect } from "@playwright/test";
 
 test("Emma browser E2E 30 operational cycles", async ({ page }) => {
+  page.on("pageerror", error => console.log("PAGEERROR:", error.message));
+  page.on("console", message => console.log("BROWSER_CONSOLE:", message.type(), message.text()));
+  await page.addInitScript(() => { navigator.serviceWorker?.getRegistrations().then(rs => rs.forEach(r => r.unregister())); if (globalThis.caches) caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))); });
   await page.goto(process.env.EMMA_TEST_URL || "https://astraoilandgas2026.github.io/AOG-Jarvis/?e2e=1", { waitUntil: "networkidle", timeout: 60000 });
   await expect(page.locator("#command")).toBeVisible({ timeout: 30000 });
 
