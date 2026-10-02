@@ -9,6 +9,8 @@ import { formatSupplierIntelligence } from "./modules/supplier-intelligence.js";
 import { analyzeDocuments } from "./modules/document-intelligence.js";
 import { analyzeProcurement } from "./modules/procurement-intelligence.js";
 import { buildExecutionPlan } from "./core/execution-plan.js";
+import { planExecution, executionResult } from "./core/execution-orchestrator.js";
+import { automationPlan } from "./core/automation-engine.js";
 const supabase=createClient(CONFIG.supabaseUrl,CONFIG.supabasePublishableKey);
 const $=s=>document.querySelector(s);
 const command=$("#command"),messages=$("#messages"),chat=$("#chat"),home=$("#home");
@@ -28,6 +30,22 @@ async function ensureAuth(){const {data,error:sessionError}=await supabase.auth.
 async function invoke(name,body){await ensureAuth();const {data,error}=await supabase.functions.invoke(name,{body});if(!error)return data;let detail="";try{if(error.context){const response=error.context instanceof Response?error.context:null;if(response){const clone=response.clone();try{const payload=await clone.json();detail=payload?.error||payload?.message||JSON.stringify(payload)}catch{detail=await response.text()}}}}catch{}throw new Error((detail||error.message||"Edge Function error").slice(0,800))}
 async function invokeContext(q){return await invokeTool("astra.context",{q,limit:8})}
 function executionRegistry(){return Object.fromEntries(Object.entries(TOOL_REGISTRY).map(([id,t])=>[id,t]))}
+async function orchestrateQuery(q){
+ const lower=q.toLowerCase();
+ const kind=/correo|email|gmail/.test(lower)?"email":/calendario|reunión|reunion|agenda/.test(lower)?"calendar":/github|código|codigo|repo/.test(lower)?"project":/documento|coa|sds|iscc|ficha/.test(lower)?"documents":"supplier";
+ const intentMap={supplier:["astra.intelligence","document.intelligence","procurement.intelligence"],email:["gmail.read"],calendar:["calendar.read"],project:["github.read"],documents:["astra.documents","document.intelligence","procurement.intelligence"]};
+ const ctx=planExecution({query:q,intent:{tool:intentMap[kind][0]},registry:executionRegistry()});
+ const outputs=[];
+ for(const id of intentMap[kind]){
+   try{
+     let data;
+     if(id==="github.read")data=await invokeGitHub(q);
+     else data=await invokeTool(id,id==="astra.intelligence"||id==="document.intelligence"||id==="procurement.intelligence"||id==="astra.documents"?{q,limit:10}:{});
+     outputs.push(executionResult(ctx,{id,status:"ok",data,source:id}));
+   }catch(error){outputs.push(executionResult(ctx,{id,status:"error",error:error?.message||String(error),source:id}))}
+ }
+ return{kind,steps:outputs.map(x=>x.steps[x.steps.length-1]),status:outputs.some(x=>x.status==="error")?"partial":"completed"};
+}
 function parseDueAt(q){const rel=q.match(/en\s+(\d+)\s*(minutos?|horas?)/i);if(!rel)return null;const d=new Date();d.setMinutes(d.getMinutes()+Number(rel[1])*(rel[2].toLowerCase().startsWith("hora")?60:1));return d.toISOString()}
 function parseTaskTitle(q){return q.replace(/^(?:emma[,\s]*)?(?:pon|crea|agrega|añade|anota|apunta|programa|recuérdame|recuerdame|alarma|recordatorio)\s*/i,"").trim()||q}
 async function invokeChat(q,context=null){
@@ -111,6 +129,8 @@ if(intent.type==="task_list"){
  addMessage("assistant",answer);speak(answer);return;
 }
 if(intent.tool==="execution.plan"){const kind=/correo|email|gmail/.test(q)?"email":/calendario|reunión|reunion|agenda/.test(q)?"calendar":/github|código|codigo|repo/.test(q)?"project":/documento|coa|sds|iscc|ficha/.test(q)?"documents":"supplier";const data=buildExecutionPlan(kind,executionRegistry());result.textContent=JSON.stringify(data,null,2);addMessage("assistant",`Plan ${kind} listo: ${data.steps.length} pasos, priorizando herramientas existentes y cero LLM innecesario.`);return}
+if(intent.tool==="execution.orchestrator"){const data=await orchestrateQuery(q);result.textContent=JSON.stringify(data,null,2);const ok=data.status==="completed";const answer=ok?"Orquestación ejecutada: "+data.steps.length+" pasos reales, sin LLM innecesario.":"Orquestación parcial: "+data.steps.length+" pasos, revisa los errores en resultados.";addMessage("assistant",answer);speak(answer);return}
+if(intent.tool==="automation.plan"){const data=automationPlan(q);result.textContent=JSON.stringify(data,null,2);const answer=data.supported?"Recurrencia detectada: "+data.cadence+". Plan listo para persistir/programar.":"No puedo programar esa recurrencia todavía: "+data.reason;addMessage("assistant",answer);speak(answer);return}
 if(intent.tool==="gmail.read"){const data=await invokeGoogle("gmail.list",{query:q.match(/(?:busca|buscar|encuentra)\s+(.+)/i)?.[1]||"in:inbox",max:10});result.textContent=JSON.stringify(data,null,2);const reply=data?.count?`Encontré ${data.count} correos en Gmail.`:"No encontré correos en Gmail.";addMessage("assistant",reply);speak(reply);return}
 if(intent.type==="action"&&intent.tool==="gmail.send"){const m=q.match(/(?:gmail.*?)(?:a|para)\s+([^\s]+).*?(?:asunto|subject)\s*[:=-]\s*(.+?)\s+(?:cuerpo|body|mensaje)\s*[:=-]\s*([\s\S]+)$/i);if(!m)throw new Error("Formato: Gmail a EMAIL asunto: ASUNTO cuerpo: MENSAJE");if(!window.confirm(`Enviar Gmail a ${m[1]}?\n\nAsunto: ${m[2]}`)){addMessage("assistant","Envío cancelado.");return}const data=await invokeGoogle("gmail.send",{to:m[1],subject:m[2].trim(),text:m[3].trim()});result.textContent=JSON.stringify(data,null,2);addMessage("assistant",data?.sent?"Gmail enviado.":"No se confirmó el envío.");speak(data?.sent?"Gmail enviado.":"No se confirmó el envío.");return}
 if(intent.tool==="calendar.read"){const data=await invokeGoogle("calendar.list",{});result.textContent=JSON.stringify(data,null,2);const reply=data?.count?`Encontré ${data.count} eventos en tu calendario.`:"No hay eventos en el período consultado.";addMessage("assistant",reply);speak(reply);return}
