@@ -92,7 +92,7 @@ Deno.serve(async(req:Request)=>{
     userId=typeof payload?.sub==="string"?payload.sub:"";
   }catch{}
   if(!userId)return new Response(JSON.stringify({error:"Invalid authentication"}),{status:401,headers:{...headers,"Content-Type":"application/json"}});
-  let body:{message?:string;history?:Array<{role:"user"|"assistant";content:string}>;context?:unknown};
+  let body:{message?:string;history?:Array<{role:"user"|"assistant";content:string}>;context?:unknown;session_id?:string;client_date?:string};
   try{body=await req.json()}catch{return new Response(JSON.stringify({error:"Invalid JSON body"}),{status:400,headers:{...headers,"Content-Type":"application/json"}})}
   const message=typeof body.message==="string"?body.message.trim():"";
   const suppliedContext=body.context?JSON.stringify(body.context).slice(0,12000):"";
@@ -108,8 +108,10 @@ Deno.serve(async(req:Request)=>{
   if(!message)return new Response(JSON.stringify({error:"Message required"}),{status:400,headers:{...headers,"Content-Type":"application/json"}});
   let interactionId:string|null=null;
   try{
-    interactionId=await logInteraction(db,userId,"user",message,persistenceClass,{session_id:sessionId,persistence_class:semanticPersistence});
-    if(interactionId){const knowledge=await recordInteractionKnowledge(db,userId,interactionId,message,`conversation:${sessionId??"default"}`);if(knowledge?.persistence==="commitment")await persistCommitmentTask(db,userId,message,knowledge.dates||[]);}
+    interactionId=await logInteraction(db,userId,"user",message,persistenceClass,{session_id:sessionId,persistence_class:semanticPersistence,client_date:(body as any).client_date||null});
+    if(interactionId){const clientDate=typeof (body as any).client_date==="string" && /^\d{4}-\d{2}-\d{2}$/.test((body as any).client_date)?(body as any).client_date:null;
+      const baseDate=clientDate?new Date(clientDate+"T12:00:00Z"):new Date();
+      const knowledge=await recordInteractionKnowledge(db,userId,interactionId,message,`conversation:${sessionId??"default"}`,baseDate);if(knowledge?.persistence==="commitment")await persistCommitmentTask(db,userId,message,knowledge.dates||[]);}
   }catch(error){
     console.error("knowledge_loop_failed",error instanceof Error?error.message:"unknown");
   }
@@ -169,7 +171,7 @@ ${suppliedContext||"(sin contexto adicional)"}
               controller.enqueue(encoder.encode("data: [DONE]\\n\\n"));controller.close();
             }catch(error){
               const status=(error as any)?.status??502;
-              await logProvider(db,userId,provider.id,provider.model,"failed",String(status),null,null);
+              await logProvider(db,userId,provider.id,provider.model,"failed",String(status),null);
               controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"error",message:error instanceof Error?error.message:"Provider error"})}\n\n`));controller.close();
             }
           }

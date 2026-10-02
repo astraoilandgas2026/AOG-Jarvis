@@ -80,7 +80,7 @@ async function unifiedContext(db:any,q:string,limit:number){
   ]);
   const productIds=(products.data||[]).map((x:any)=>x.id);
   const technicalSpecs=productIds.length?await db.from("technical_specs").select(allowed.technical_specs).in("product_id",productIds).order("created_at",{ascending:false}).limit(60):{data:[]};
-  const result={query:q,tokens,suppliers:suppliers||[],domains:domains||[],contacts:contacts.data||[],products:products.data||[],offers:offers.data||[],documents:docs.data||[],due_diligence:dd.data||[],timeline:timeline.data||[],follow_ups:followups.data||[],certifications:certifications.data||[],logistics:logistics.data||[],technical_specs:technicalSpecs.data||[],intelligence_facts:facts.data||[],red_flags:redFlags.data||[]};
+  const result:any={query:q,tokens,suppliers:suppliers||[],domains:domains||[],contacts:contacts.data||[],products:products.data||[],offers:offers.data||[],documents:docs.data||[],due_diligence:dd.data||[],timeline:timeline.data||[],follow_ups:followups.data||[],certifications:certifications.data||[],logistics:logistics.data||[],technical_specs:technicalSpecs.data||[],intelligence_facts:facts.data||[],red_flags:redFlags.data||[]};
   result.knowledge_graph=buildKnowledgeGraph(result);
   return result;
 }

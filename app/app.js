@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.105.0";
 import { CONFIG } from "./config.js";
 import { createOrb } from "./modules/orb.js";
 import { createVoice, detectLanguage, normalizeVoiceText } from "./modules/voice.js";
-import { getTool, TOOL_REGISTRY } from "./core/tool-registry.js?v=26";
+import { getTool, TOOL_REGISTRY } from "./core/tool-registry.js?v=27";
 import { classifyIntent } from "./core/intent-router.js?v=26";
 import { normalizeSupplierQuery } from "./core/query-normalizer.js";
 import { formatSupplierIntelligence } from "./modules/supplier-intelligence.js";
@@ -60,7 +60,7 @@ async function invokeChat(q,context=null){
   const response=await fetch(`${CONFIG.supabaseUrl}/functions/v1/jarvis-chat`,{
     method:"POST",
     headers:{"Authorization":`Bearer ${session.access_token}`,"apikey":CONFIG.supabasePublishableKey,"Content-Type":"application/json"},
-    body:JSON.stringify({message:q,history,context}),cache:"no-store"
+    body:JSON.stringify({message:q,history,context,client_date:new Date().toLocaleDateString("en-CA")}),cache:"no-store"
   });
   if(!response.ok)throw new Error((await response.text()).slice(0,800));
   const type=response.headers.get("content-type")||"";
