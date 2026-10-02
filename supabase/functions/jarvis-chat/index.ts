@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
+import { recordInteractionKnowledge, classifyKnowledge } from "../_shared/emma-knowledge.ts";
 
 const allowedOrigins=new Set(["https://astraoilandgas2026.github.io","http://localhost:3000","http://localhost:5500"]);
 function cors(req:Request){const origin=req.headers.get("Origin")??"";return {"Access-Control-Allow-Origin":allowedOrigins.has(origin)?origin:"null","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS","Vary":"Origin"};}
@@ -77,9 +78,9 @@ Deno.serve(async(req:Request)=>{
   const message=typeof body.message==="string"?body.message.trim():"";
   const suppliedContext=body.context?JSON.stringify(body.context).slice(0,12000):"";
   const sessionId=typeof body.session_id==="string"?body.session_id.slice(0,120):null;
-  const persistenceClass=classifyPersistence(message);
+  const persistenceClass=classifyPersistence(message);\n  const semanticPersistence=classifyKnowledge(message);
   await logInteraction(db,userId,"user",message,persistenceClass,{session_id:sessionId});
-  if(!message)return new Response(JSON.stringify({error:"Message required"}),{status:400,headers:{...headers,"Content-Type":"application/json"}});
+  if(!message)return new Response(JSON.stringify({error:"Message required"}),{status:400,headers:{...headers,"Content-Type":"application/json"}});\n  let interactionId:string|null=null;\n  try{\n    interactionId=await logInteraction(db,userId,"user",message,persistenceClass,{session_id:sessionId});\n    if(interactionId)await recordInteractionKnowledge(db,userId,interactionId,message,`conversation:${sessionId??"default"}`);\n  }catch(error){\n    console.error("knowledge_loop_failed",error instanceof Error?error.message:"unknown");\n  }
   const history=(Array.isArray(body.history)?body.history:[]).filter(x=>x&&typeof x.content==="string"&&(x.role==="user"||x.role==="assistant")).slice(-6);
   let memories="";
   const needsMemory=!/^(hola|holi|buenas|buenos días|buenas tardes|buenas noches|hey|hello|gracias|ok|okay|perfecto|listo)[!.?,\s]*$/i.test(message);
