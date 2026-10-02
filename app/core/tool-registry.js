@@ -1,6 +1,7 @@
 export const TOOL_REGISTRY=Object.freeze({
  "astra.priority":{id:"astra.priority",label:"Prioridad Astra",module:"astra",permission:"read",functionName:"jarvis-tool",description:"Consulta prioridades globales de Astra."},
  "astra.context":{id:"astra.context",label:"Contexto Astra global",module:"astra",permission:"read",functionName:"jarvis-tool",description:"Busca y cruza inteligencia Astra en una sola consulta."},
+ "astra.intelligence":{id:"astra.intelligence",label:"Supplier Intelligence",module:"astra",permission:"read",functionName:"jarvis-tool",description:"Orquesta contexto de proveedor, evidencia, DD, ofertas, documentos, relaciones y follow-ups en una sola consulta."},
  "memory.write":{id:"memory.write",label:"Guardar memoria",module:"memory",permission:"write",functionName:"jarvis-tool",description:"Guarda memoria explícita del usuario."},
  "memory.read":{id:"memory.read",label:"Buscar memoria",module:"memory",permission:"read",functionName:"jarvis-tool",description:"Recupera memoria activa por contexto y relevancia."},
  "memory.update":{id:"memory.update",label:"Actualizar memoria",module:"memory",permission:"write",functionName:"jarvis-tool",description:"Actualiza una memoria existente manteniendo su trazabilidad."},
