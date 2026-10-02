@@ -46,10 +46,13 @@ export async function ensureEntityAliases(db:any,userId:string){
   for(const n of nodes||[]){
     const alias=String(n.label||"").trim(); const normalized=normalizeEntity(alias);
     if(normalized.length<2)continue;
-    const {error:e}=await db.from("emma_entity_aliases").upsert({
-      user_id:null,canonical_node_key:n.node_key,entity_type:n.entity_type,alias,normalized_alias:normalized,confidence:1,source:"graph_seed",active:true
-    },{onConflict:"coalesce(user_id, '00000000-0000-0000-0000-000000000000'),normalized_alias,entity_type"});
-    if(!e)inserted++;
+    const {data:existing}=await db.from("emma_entity_aliases").select("id").is("user_id",null).eq("normalized_alias",normalized).eq("entity_type",n.entity_type).maybeSingle();
+    if(existing){
+      await db.from("emma_entity_aliases").update({canonical_node_key:n.node_key,alias,confidence:1,active:true,updated_at:new Date().toISOString()}).eq("id",existing.id);
+    }else{
+      const {error:e}=await db.from("emma_entity_aliases").insert({user_id:null,canonical_node_key:n.node_key,entity_type:n.entity_type,alias,normalized_alias:normalized,confidence:1,source:"graph_seed",active:true});
+      if(!e)inserted++;
+    }
   }
   return inserted;
 }
