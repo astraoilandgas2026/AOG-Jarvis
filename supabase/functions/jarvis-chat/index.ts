@@ -58,7 +58,6 @@ Deno.serve(async(req:Request)=>{
   try{body=await req.json()}catch{return new Response(JSON.stringify({error:"Invalid JSON body"}),{status:400,headers:{...headers,"Content-Type":"application/json"}})}
   const message=typeof body.message==="string"?body.message.trim():"";
   const suppliedContext=body.context?JSON.stringify(body.context).slice(0,12000):"";
-  const suppliedContext=body.context?JSON.stringify(body.context).slice(0,12000):"";
   if(!message)return new Response(JSON.stringify({error:"Message required"}),{status:400,headers:{...headers,"Content-Type":"application/json"}});
   const history=(Array.isArray(body.history)?body.history:[]).filter(x=>x&&typeof x.content==="string"&&(x.role==="user"||x.role==="assistant")).slice(-6);
   let memories="";
@@ -88,6 +87,9 @@ Core de Leonardo: convertir información en inteligencia verificada, estructura 
 
 Memoria relevante disponible:
 ${memories||"(sin memoria dinámica registrada)"}
+
+Contexto global/procurement proporcionado por el núcleo:
+${suppliedContext||"(sin contexto adicional)"}
 `;
 
   const messages:Message[]=[{role:"system",content:system},...history,{role:"user",content:message}];
