@@ -54,9 +54,11 @@ Deno.serve(async(req:Request)=>{
     userId=typeof payload?.sub==="string"?payload.sub:"";
   }catch{}
   if(!userId)return new Response(JSON.stringify({error:"Invalid authentication"}),{status:401,headers:{...headers,"Content-Type":"application/json"}});
-  let body:{message?:string;history?:Array<{role:"user"|"assistant";content:string}>};
+  let body:{message?:string;history?:Array<{role:"user"|"assistant";content:string}>;context?:unknown};
   try{body=await req.json()}catch{return new Response(JSON.stringify({error:"Invalid JSON body"}),{status:400,headers:{...headers,"Content-Type":"application/json"}})}
   const message=typeof body.message==="string"?body.message.trim():"";
+  const suppliedContext=body.context?JSON.stringify(body.context).slice(0,12000):"";
+  const suppliedContext=body.context?JSON.stringify(body.context).slice(0,12000):"";
   if(!message)return new Response(JSON.stringify({error:"Message required"}),{status:400,headers:{...headers,"Content-Type":"application/json"}});
   const history=(Array.isArray(body.history)?body.history:[]).filter(x=>x&&typeof x.content==="string"&&(x.role==="user"||x.role==="assistant")).slice(-6);
   let memories="";
