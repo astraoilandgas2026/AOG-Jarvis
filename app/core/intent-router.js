@@ -6,6 +6,7 @@ export function classifyIntent(text=""){
  if(/(?:actualiza|cambia|modifica).*(?:memoria|recuerdo)|(?:memoria|recuerdo).*(?:actualiza|cambia|modifica)/.test(q))return{type:"memory_update",module:"memory"};
  if(/(?:olvida|borra|desactiva).*(?:memoria|recuerdo)|(?:memoria|recuerdo).*(?:olvida|borra|desactiva)/.test(q))return{type:"memory_deactivate",module:"memory"};
  if(/(?:recuerda|acuérdate|acuerdate|anota|apunta|guarda|memoriza|no olvides)/.test(q))return{type:"memory_write",module:"memory"};
+ if(/planifica.*ejecución|plan de ejecución|cómo ejecutar|como ejecutar/.test(q))return{type:"tool",module:"execution",tool:"execution.plan"};
  if(/(?:prioridad|prioridades|astra|belincar|fl óleos|fl oleos|sosa|issc)/.test(q))return{type:"tool",module:"astra",tool:"astra.context"};
  if(/analiza.*document|inteligencia documental|document intelligence/.test(q))return{type:"tool",module:"documents",tool:"document.intelligence"};
  if(/inteligencia de procurement|procurement intelligence|estado comercial|gaps? de proveedor|readiness/.test(q))return{type:"tool",module:"astra",tool:"procurement.intelligence"};
