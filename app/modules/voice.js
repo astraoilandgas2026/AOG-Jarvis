@@ -9,3 +9,9 @@ export function createVoice({orb,onTranscript,onError}){
   recognition.onresult=event=>{const transcript=event.results?.[0]?.[0]?.transcript?.trim();if(transcript)onTranscript?.(transcript)};
   return{supported:true,start(){try{recognition.start()}catch{onError?.("voice-busy")}}};
 }
+
+// Zero-cost voice baseline: browser-native synthesis keeps latency and API cost near zero.
+// External voice providers can be added later without changing the recognition contract.
+export function getVoiceProfile(){
+  return{mode:"browser-native",language:"en-US",personality:"warm, sharp, playful, concise, dry humor when appropriate",externalProvider:false};
+}
