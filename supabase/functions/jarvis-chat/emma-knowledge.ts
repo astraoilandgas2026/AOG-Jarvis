@@ -71,23 +71,51 @@ export async function ensureEntityAliases(db:any,userId:string){
   }
   return inserted;
 }
+function normalizeFactObject(value:string){return normalizeEntity(value).slice(0,500);}
+function extractStructuredFacts(text:string,persistence:string,entities:any[],dates:string[]){
+  const out:any[]=[];const subject=entities[0]?.canonical_node_key||null;
+  const push=(predicate:string,object_text:string,confidence=0.9,fact_date:string|null=null)=>{
+    const object=String(object_text||"").trim().replace(/^[\\s:,-]+|[\\s,.;:!?-]+$/g,"").slice(0,2000);
+    if(object)out.push({predicate,object_text:object,object_node_key:null,fact_date,evidence_level:"user_stated",confidence,subject_node_key:subject,metadata:{persistence_class:persistence,entities}});
+  };
+  if(dates.length)for(const date of dates)push("mentioned_date",date,0.98,date);
+  if(entities.length)push("mentioned_entity",entities.map((x:any)=>x.alias).join(", "),0.96,null);
+  const compact=String(text??"").trim();
+  if(persistence==="memory")push("user_preference",compact,0.95,null);
+  if(persistence==="decision")push("decision",compact,0.94,dates[0]||null);
+  if(persistence==="commitment")push("commitment",compact,0.93,dates[0]||null);
+  if(persistence==="correction")push("correction",compact,0.97,dates[0]||null);
+  if(persistence==="research")push("research_request",compact,0.90,null);
+  if(persistence==="fact"){
+    const patterns=[
+      {re:/^(.{2,100}?)\\s+(?:es|son)\\s+(.{2,300})$/i,p:"stated_value"},
+      {re:/^(.{2,100}?)\\s+tiene\\s+(.{2,300})$/i,p:"has"},
+      {re:/(?:precio|price)\\s+(?:de|of)\\s+(.{2,120}?)\\s+(?:es|=)\\s*([\\$€£]?\\s?[0-9][0-9.,]*)/i,p:"price"},
+      {re:/(?:volumen|volume|cantidad)\\s+(?:de|of)?\\s*(.{2,120}?)\\s+(?:es|=)\\s*([0-9][0-9.,]*\\s*(?:mt|kg|ton|tons|toneladas)?)/i,p:"volume"}
+    ];
+    for(const x of patterns){const m=compact.match(x.re);if(m){push(x.p,`${m[1].trim()}: ${m[2].trim()}`,0.92,dates[0]||null);break;}}
+  }
+  return out;
+}
+function factKey(f:any){return [f.subject_node_key||"",f.predicate||"",normalizeFactObject(f.object_text||""),f.fact_date||""].join("|");}
 export async function recordInteractionKnowledge(db:any,userId:string,interactionId:string,text:string,sourceRef:string){
-  const persistence=classifyKnowledge(text);
-  const dates=extractDates(text);
-  const entities=await resolveEntities(db,userId,text);
-  const subject=entities[0]?.canonical_node_key||null;
-  const facts:any[]=[];
-  if(dates.length){
-    for(const date of dates)facts.push({user_id:userId,interaction_id:interactionId,subject_node_key:subject,predicate:"mentioned_date",object_text:date,fact_date:date,evidence_level:"user_stated",source_type:"conversation",source_ref:sourceRef,confidence:0.98,metadata:{persistence_class:persistence,entities}});
+  const persistence=classifyKnowledge(text),dates=extractDates(text),entities=await resolveEntities(db,userId,text),drafts=extractStructuredFacts(text,persistence,entities,dates);
+  let created=0,deduplicated=0,superseded=0;
+  for(const draft of drafts){
+    const {data:existing,error:findError}=await db.from("emma_knowledge_facts").select("id,status,object_text,subject_node_key,predicate,fact_date").eq("user_id",userId).eq("status","active").eq("subject_node_key",draft.subject_node_key).eq("predicate",draft.predicate).limit(50);
+    if(findError)throw findError;
+    if((existing||[]).some((x:any)=>factKey(x)===factKey(draft))){deduplicated++;continue;}
+    if(persistence==="correction"||persistence==="fact"){
+      for(const old of (existing||[]).filter((x:any)=>normalizeFactObject(x.object_text||"")!==normalizeFactObject(draft.object_text||"")).slice(0,5)){
+        const {error}=await db.from("emma_knowledge_facts").update({status:"superseded",updated_at:new Date().toISOString()}).eq("id",old.id).eq("user_id",userId).eq("status","active");
+        if(error)throw error;
+        superseded++;draft.supersedes_fact_id=old.id;
+      }
+    }
+    const row={user_id:userId,interaction_id:interactionId,subject_node_key:draft.subject_node_key,predicate:draft.predicate,object_text:draft.object_text,object_node_key:draft.object_node_key,fact_date:draft.fact_date,evidence_level:draft.evidence_level,source_type:"conversation",source_ref:sourceRef,confidence:draft.confidence,status:"active",supersedes_fact_id:draft.supersedes_fact_id||null,metadata:draft.metadata||{}};
+    const {error}=await db.from("emma_knowledge_facts").insert(row);if(error)throw error;created++;
   }
-  if(entities.length){
-    facts.push({user_id:userId,interaction_id:interactionId,subject_node_key:subject,predicate:"mentioned_entity",object_text:entities.map((x:any)=>x.alias).join(", "),object_node_key:subject,evidence_level:"user_stated",source_type:"conversation",source_ref:sourceRef,confidence:0.96,metadata:{persistence_class:persistence,entities}});
-  }
-  if(["memory","decision","commitment","correction","fact","research"].includes(persistence)){
-    facts.push({user_id:userId,interaction_id:interactionId,subject_node_key:subject,predicate:`conversation_${persistence}`,object_text:text.slice(0,2000),evidence_level:"user_stated",source_type:"conversation",source_ref:sourceRef,confidence:0.90,metadata:{dates,entities}});
-  }
-  if(facts.length)await db.from("emma_knowledge_facts").insert(facts);
-  return {persistence,dates,entities,factsCreated:facts.length};
+  return {persistence,dates,entities,factsCreated:created,deduplicated,superseded};
 }
 export async function saveResearchSource(db:any,userId:string,input:any){
   const text=String(input.content_excerpt||"").slice(0,12000);
