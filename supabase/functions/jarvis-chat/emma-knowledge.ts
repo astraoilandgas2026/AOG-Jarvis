@@ -104,8 +104,8 @@ function extractStructuredFacts(text:string,persistence:string,entities:any[],da
   return out;
 }
 function factKey(f:any){return [f.subject_node_key||"",f.predicate||"",normalizeFactObject(f.object_text||""),f.fact_date||""].join("|");}
-export async function recordInteractionKnowledge(db:any,userId:string,interactionId:string,text:string,sourceRef:string){
-  const persistence=classifyKnowledge(text),dates=extractDates(text),entities=await resolveEntities(db,userId,text),drafts=extractStructuredFacts(text,persistence,entities,dates);
+export async function recordInteractionKnowledge(db:any,userId:string,interactionId:string,text:string,sourceRef:string,baseDate=new Date()){
+  const persistence=classifyKnowledge(text),dates=extractDates(text,baseDate),entities=await resolveEntities(db,userId,text),drafts=extractStructuredFacts(text,persistence,entities,dates);
   let created=0,deduplicated=0,superseded=0;
   for(const draft of drafts){
     const {data:existing,error:findError}=await db.from("emma_knowledge_facts").select("id,status,object_text,subject_node_key,predicate,fact_date").eq("user_id",userId).eq("status","active").eq("subject_node_key",draft.subject_node_key).eq("predicate",draft.predicate).limit(50);
