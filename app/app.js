@@ -60,7 +60,7 @@ async function invokeChat(q,context=null){
   const response=await fetch(`${CONFIG.supabaseUrl}/functions/v1/jarvis-chat`,{
     method:"POST",
     headers:{"Authorization":`Bearer ${session.access_token}`,"apikey":CONFIG.supabasePublishableKey,"Content-Type":"application/json"},
-    body:JSON.stringify({message:q,history,context}),cache:"no-store"
+    body:JSON.stringify({message:q,history,context,client_date:new Date().toLocaleDateString("en-CA")}),cache:"no-store"
   });
   if(!response.ok)throw new Error((await response.text()).slice(0,800));
   const type=response.headers.get("content-type")||"";
