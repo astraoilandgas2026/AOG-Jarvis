@@ -8,7 +8,7 @@ import { normalizeSupplierQuery } from "./core/query-normalizer.js";
 const supabase=createClient(CONFIG.supabaseUrl,CONFIG.supabasePublishableKey);
 const $=s=>document.querySelector(s);
 const command=$("#command"),messages=$("#messages"),chat=$("#chat"),home=$("#home");
-const logout=$("#logout"),install=$("#install"),result=$("#result");
+const logout=$("#logout"),install=$("#install"),result=$("#result")||document.createElement("pre");
 let voice=null;
 const orb=createOrb({root:$("#orb"),status:$("#orb-status"),onActivate:()=>voice?.start()});
 voice=createVoice({orb,onTranscript:t=>{command.value=t;execute(t)},onError:e=>setStatus(e)});
