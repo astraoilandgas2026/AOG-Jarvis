@@ -25,14 +25,18 @@ function memoryTokens(q:string){
   return [...new Set((q.toLowerCase().match(/[a-záéíóúñ0-9]{3,}/gi)||[]))].filter(x=>!new Set(["que","como","para","con","los","las","del","una","por","qué","quiero","tengo","este","esta","esto","desde","ahora"]).has(x)).slice(0,12);
 }
 async function memorySearch(db:any,userId:string,q:string,limit:number){
-  const {data,error}=await db.from("jarvis_memory").select("id,domain,memory_type,content,importance,source,evidence_level,active,created_at,updated_at").eq("user_id",userId).eq("active",true).order("importance",{ascending:false}).order("updated_at",{ascending:false}).limit(Math.max(limit*8,40));
+  const {data,error}=await db.from("jarvis_memory").select("id,domain,memory_type,content,importance,source,evidence_level,active,created_at,updated_at").eq("user_id",userId).eq("active",true).order("updated_at",{ascending:false}).limit(Math.max(limit*10,60));
   if(error)throw error;
   const tokens=memoryTokens(q);
+  const now=Date.now();
+  const typeWeight=(type:string)=>({preference:3,decision:3,project:2,episodic:2,note:1,context:1}[type]??1);
   const scored=(data||[]).map((m:any)=>{
     const hay=(m.domain+" "+m.memory_type+" "+m.content).toLowerCase();
     const matches=tokens.reduce((n,t)=>n+(hay.includes(t)?1:0),0);
-    return {...m,_score:matches*10+(Number(m.importance)||0)};
-  }).filter((m:any)=>m._score>0).sort((a:any,b:any)=>b._score-a._score||String(b.updated_at).localeCompare(String(a.updated_at))).slice(0,limit);
+    const ageDays=Math.max(0,(now-new Date(m.updated_at||m.created_at).getTime())/86400000);
+    const decay=1/(1+ageDays/30);
+    return {...m,_score:matches*12+(Number(m.importance)||0)*typeWeight(m.memory_type)*decay};
+  }).filter((m:any)=>m._score>0||tokens.length===0).sort((a:any,b:any)=>b._score-a._score||String(b.updated_at).localeCompare(String(a.updated_at))).slice(0,limit);
   return scored.map(({_score,...m}:any)=>m);
 }
 
@@ -104,9 +108,16 @@ Deno.serve(async(req:Request)=>{
  if(tool==="memory.write"){
    if(q.length<2)return json({error:"Memory text required"},400,h);
    const memory={user_id:userData.user.id,domain:body.domain||"personal",memory_type:body.memory_type||"note",content:q.slice(0,1200),importance:Math.min(Math.max(Number(body.importance)||4,1),5),source:body.source||"conversation",evidence_level:body.evidence_level||"user_stated",active:true};
+   const {data:existing,error:findError}=await db.from("jarvis_memory").select("id,importance,active").eq("user_id",userData.user.id).eq("active",true).eq("content",memory.content).limit(1).maybeSingle();
+   if(findError)return json({error:"Memory dedupe check failed",detail:findError.message},500,h);
+   if(existing){
+     const {error}=await db.from("jarvis_memory").update({importance:Math.max(Number(existing.importance)||0,memory.importance),updated_at:new Date().toISOString()}).eq("id",existing.id).eq("user_id",userData.user.id);
+     if(error)return json({error:"Memory refresh failed",detail:error.message},500,h);
+     return json({ok:true,tool,deduplicated:true,data:{id:existing.id,...memory}},200,h);
+   }
    const {error}=await db.from("jarvis_memory").insert(memory);
    if(error)return json({error:"Memory write failed",detail:error.message},500,h);
-   return json({ok:true,tool,data:{...memory}},200,h);
+   return json({ok:true,tool,deduplicated:false,data:{...memory}},200,h);
  }
 
  if(tool==="memory.read"){
