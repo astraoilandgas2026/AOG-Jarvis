@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.105.0";
 import { CONFIG } from "./config.js";
 import { createOrb } from "./modules/orb.js";
-import { createVoice } from "./modules/voice.js";
+import { createVoice, speakEmma, detectLanguage } from "./modules/voice.js";
 import { getTool, TOOL_REGISTRY } from "./core/tool-registry.js?v=26";
 import { classifyIntent } from "./core/intent-router.js?v=26";
 import { normalizeSupplierQuery } from "./core/query-normalizer.js";
@@ -21,7 +21,7 @@ const orb=createOrb({root:$("#orb"),status:$("#orb-status"),onActivate:()=>voice
 voice=createVoice({orb,onTranscript:t=>{command.value=t;execute(t)},onError:e=>setStatus(e)});
 let deferredInstall=null,history=[];
 function setStatus(text){$("#orb-status").textContent=text}
-function speak(text){if(new URLSearchParams(location.search).has("e2e"))return;if(!("speechSynthesis"in window))return;window.speechSynthesis.cancel();orb.setState("speaking");const u=new SpeechSynthesisUtterance(text);u.lang="es-ES";u.rate=.98;u.onend=()=>orb.setState("idle");window.speechSynthesis.speak(u)}
+async function speak(text){if(new URLSearchParams(location.search).has("e2e"))return;if(!text)return;const language=detectLanguage(text);orb.setState("speaking");try{const session=(await supabase.auth.getSession()).data.session;if(!session?.access_token)throw new Error("AUTH_SESSION");const response=await fetch(`${CONFIG.supabaseUrl}/functions/v1/jarvis-voice`,{method:"POST",headers:{"Authorization":`Bearer ${session.access_token}`,"apikey":CONFIG.supabasePublishableKey,"Content-Type":"application/json"},body:JSON.stringify({text,language_code:language==="en"?"en":"es",model_id:"eleven_v4"})});if(!response.ok)throw new Error((await response.text()).slice(0,500));const blob=await response.blob();const url=URL.createObjectURL(blob);const audio=new Audio(url);audio.onended=()=>{URL.revokeObjectURL(url);orb.setState("idle")};audio.onerror=()=>{URL.revokeObjectURL(url);orb.setState("idle");speakEmma(text,{language,rate:.98})};await audio.play()}catch{orb.setState("idle");speakEmma(text,{language,rate:.98})}}
 function addMessage(role,text){const el=document.createElement("div");el.className="message "+role;el.textContent=text;messages.appendChild(el);messages.scrollTop=messages.scrollHeight}
 async function addArtifactMessage(artifact){const {renderArtifact}=await import("./modules/documents.js");const el=document.createElement("div");el.className="message assistant artifact-message";const card=document.createElement("div");renderArtifact(card,artifact);el.appendChild(card);messages.appendChild(el);messages.scrollTop=messages.scrollHeight}
 function renderModules(){modulesNav.innerHTML="";Object.entries(modules).forEach(([key,m])=>{const b=document.createElement("button");b.textContent=m.label;b.dataset.module=key;b.className=key===activeModule?"active":"";b.onclick=()=>selectModule(key);modulesNav.appendChild(b)})}

@@ -163,6 +163,21 @@ Deno.serve(async(req:Request)=>{
    if(error)return json({error:"Task create failed",detail:error.message},500,h);
    return json({ok:true,tool,data:{title:task.title,due_at:task.due_at,priority:task.priority,status:task.status}},200,h);
  }
+ if(tool==="automation.save"){
+   if(q.length<2)return json({error:"Automation prompt required"},400,h);
+   const cadence=String(body.cadence||"").toLowerCase();
+   const cron=String(body.cron_expression||"");
+   if(!["daily","weekly","monthly"].includes(cadence)||!cron)return json({error:"cadence and cron_expression required"},400,h);
+   const row={user_id:userData.user.id,name:String(body.name||q).slice(0,160),prompt:q.slice(0,1200),cadence,cron_expression:cron,enabled:true,next_run_at:body.next_run_at||null};
+   const {data,error}=await db.from("jarvis_automations").insert(row).select("id,name,prompt,cadence,cron_expression,enabled,next_run_at,created_at").single();
+   if(error)return json({error:"Automation save failed",detail:error.message},500,h);
+   return json({ok:true,tool,data},200,h);
+ }
+ if(tool==="automation.list"){
+   const {data,error}=await db.from("jarvis_automations").select("id,name,prompt,cadence,cron_expression,enabled,last_run_at,next_run_at,created_at,updated_at").eq("user_id",userData.user.id).eq("enabled",true).order("next_run_at",{ascending:true,nullsFirst:false}).limit(limit);
+   if(error)return json({error:"Automation list failed",detail:error.message},500,h);
+   return json({ok:true,tool,count:data?.length||0,data:data||[]},200,h);
+ }
  if(tool==="personal.task.list"){
    const {data,error}=await db.from("jarvis_tasks").select("id,title,details,due_at,priority,status,created_at,updated_at").eq("user_id",userData.user.id).neq("status","done").order("due_at",{ascending:true,nullsFirst:false}).order("created_at",{ascending:false}).limit(limit);
    if(error)return json({error:"Task list failed",detail:error.message},500,h);
