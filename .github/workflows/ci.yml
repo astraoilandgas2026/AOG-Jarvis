@@ -1,0 +1,43 @@
+name: Emma CI
+
+on:
+  push:
+    branches: ["main", "ci/**", "feat/**", "fix/**"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  deno:
+    name: Deno static verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check critical Emma functions
+        run: |
+          set -euo pipefail
+          deno check --no-config supabase/functions/jarvis-chat/index.ts
+          deno check --no-config supabase/functions/jarvis-chat/emma-knowledge.ts
+          deno check --no-config supabase/functions/jarvis-tool/index.ts
+          deno check --no-config supabase/functions/jarvis-tool/emma-knowledge.ts
+
+      - name: Verify critical source invariants
+        run: |
+          set -euo pipefail
+          grep -q 'recordInteractionKnowledge' supabase/functions/jarvis-chat/index.ts
+          grep -q 'saveResearchBundle' supabase/functions/jarvis-chat/index.ts
+          grep -q 'emma.knowledge' supabase/functions/jarvis-tool/index.ts
+          grep -q 'emma.research.save' supabase/functions/jarvis-tool/index.ts
+          grep -q 'emma.entity.resolve' supabase/functions/jarvis-tool/index.ts
+          grep -q 'emma_graph_nodes' supabase/functions/jarvis-tool/index.ts
+          grep -q 'emma_knowledge_facts' supabase/functions/jarvis-chat/emma-knowledge.ts
+          grep -q 'emma_research_sources' supabase/functions/jarvis-chat/emma-knowledge.ts
