@@ -8,5 +8,10 @@ export function createOrb({ root, status, onActivate }) {
       next === "speaking" ? "RESPONDIENDO" : "";
   };
   root.addEventListener("click", () => onActivate?.());
-  return { setState, getState: () => state };
+  const setAppearance = (appearance) => {
+    if (!appearance) return;
+    root.dataset.orb = appearance.id || "aurora";
+    root.setAttribute("aria-label", `Hablar con Emma · ${appearance.name || "Emma"}`);
+  };
+  return { setState, getState: () => state, setAppearance };
 }
