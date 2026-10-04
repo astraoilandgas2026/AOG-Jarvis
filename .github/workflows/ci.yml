@@ -22,6 +22,12 @@ jobs:
         with:
           deno-version: v2.x
 
+      - name: Run deterministic Emma routing tests
+        run: deno test --no-config core/smart-router.test.js app/core/emma-runtime.test.js
+
+      - name: Check browser runtime syntax
+        run: node --check app/app.js
+
       - name: Type-check critical Emma functions
         run: |
           set -euo pipefail

@@ -1,5 +1,5 @@
 const WRITE_TOOLS=new Set(["mail.send","gmail.send","calendar.create","memory.update","memory.deactivate","personal.task.create"]);
-export function createExecutionContext({query="",intent=null}={}){return{query,intent,started_at:new Date().toISOString(),steps:[],status:"planned"}}
+export function createExecutionContext({query="",intent=null,route=null,budget=null}={}){return{query,intent,route,budget,started_at:new Date().toISOString(),steps:[],status:"planned"}}
 export function planExecution({query="",intent=null,tools=[],registry={}}={}){
  const ctx=createExecutionContext({query,intent});
  const ids=tools.length?tools:(intent?.tools||intent?.tool?[...(intent.tools||[intent.tool])]:[]);
