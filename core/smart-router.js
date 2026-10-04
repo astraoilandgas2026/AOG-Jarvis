@@ -8,7 +8,8 @@ const WORDS = {
   multiStep: /\b(compara|ranking|rankea|analiza|análisis|cruza|cross[- ]check|encuentra|find|lista|varios|multiple|varias)\b/i,
   execution: /\b(crea|crear|actualiza|actualizar|guarda|guardar|elimina|eliminar|envía|enviar|ejecuta|ejecutar|programa|programar|recordatorio|tarea|task|email|correo)\b/i,
   realtime: /\b(ahora|hoy|actualmente|en este momento|current|today|now)\b/i,
-  simpleLookup: /\b(precio|proveedor|proveedores|producto|productos|contacto|email|teléfono|estado|status|cantidad|volumen)\b/i
+  simpleLookup: /\b(precio|proveedor|proveedores|producto|productos|contacto|email|teléfono|estado|status|cantidad|volumen)\b/i,
+  procurementDeep: /\b(capacidad|exportación|exportacion|compliance|calidad|quality|origen|origin|iscc|ffa|acidez|p\/s|riesgo|risk|due diligence|dd|pago|anticipo|advance|incoterm)\b/i
 };
 const COST = Object.freeze({ fast: 1, standard: 2, deep: 4 });
 const hit = (text, pattern) => pattern.test(text) ? 1 : 0;
@@ -23,7 +24,8 @@ export function routeTask(input, context = {}) {
   const hasRealtime=hit(text,WORDS.realtime), hasSimpleLookup=hit(text,WORDS.simpleLookup);
   const needsVerification=context.requiresEvidence===true || context.externalData===true || context.highRisk===true;
 
-  const deep = hasEvidence + hasMultiStep + (needsVerification ? 1 : 0) >= 2 ||
+  const deep = hasProcurementDeep ||
+    hasEvidence + hasMultiStep + (needsVerification ? 1 : 0) >= 2 ||
     (hasWeb && hasMultiStep) || (hasExecution && context.highRisk===true);
   const standard = !deep && (hasWeb || hasExecution || hasRealtime || context.toolRequired===true);
   let tier = deep ? "deep" : standard ? "standard" : "fast";
@@ -33,7 +35,7 @@ export function routeTask(input, context = {}) {
   const verification = tier==="deep" ? "required" :
     tier==="standard" && (hasWeb || hasEvidence) ? "required" : "none";
   const parallel = tier==="deep" && (hasWeb || hasMultiStep || context.parallelizable===true);
-  const reason = deep ? "multi_step_or_evidence" :
+  const reason = deep ? (hasProcurementDeep ? "procurement_dd" : "multi_step_or_evidence") :
     standard ? "tool_or_external_data" : hasSimpleLookup ? "deterministic_lookup" : "simple_request";
 
   return {
