@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.105.0";
 import { CONFIG } from "./config.js";
 import { createOrb } from "./modules/orb.js";
 import { chooseOrb } from "./modules/orb-personality.js";
-import { discoverLocalBridge } from "./modules/local-bridge.js";
+import { discoverLocalBridge, bridgeCommand } from "./modules/local-bridge.js";
 import { registerAdapter, listAdapters } from "./modules/adapter-registry.js";
 import { autonomyPolicy } from "./modules/evidence-policy.js";
 import { createVoice, detectLanguage, normalizeVoiceText } from "./modules/voice.js";
