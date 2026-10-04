@@ -4,6 +4,7 @@ const cases=[
   ["simple supplier lookup",routeTask("¿Cuál es el precio de Renovar?").tier,"fast"],
   ["web research",routeTask("Investiga Renovar y verifica fuentes").tier,"standard"],
   ["DD",routeTask("Busca y verifica capacidad, producto, exportación y compliance").tier,"deep"],
+  ["procurement risk",routeTask("Verifica ISCC, FFA, origen, capacidad e Incoterm de Renovar").tier,"deep"],
   ["high risk",routeTask("Confirma una oferta antes de pagar",{highRisk:true}).tier,"standard"],
   ["parallel research",routeTask("Encuentra y compara 5 proveedores",{parallelizable:true}).parallel,true]
 ];
