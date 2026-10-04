@@ -45,25 +45,17 @@ async function withTimeout(promise,ms,label){let timer;try{return await Promise.
 async function ensureAuth(){
  setStatus("CONECTANDO EMMA");
  try{
-  const {data,error:sessionError}=await withTimeout(supabase.auth.getSession(),5000,"AUTH_SESSION_TIMEOUT");
-  if(sessionError)throw new Error("AUTH_SESSION: "+sessionError.message);
-  if(data?.session?.access_token){renderSession(data.session);return data.session}
-  const {data:anon,error}=await withTimeout(supabase.auth.signInAnonymously(),8000,"AUTH_ANON_TIMEOUT");
-  if(error||!anon?.session)throw new Error("AUTH_ANON: "+(error?.message||"No se pudo autenticar la sesión anónima."));
-  renderSession(anon.session);return anon.session
- }catch(clientError){
-  try{
-   const response=await fetch(CONFIG.supabaseUrl+"/auth/v1/signup",{method:"POST",headers:{"Content-Type":"application/json","apikey":CONFIG.supabasePublishableKey},body:JSON.stringify({}),cache:"no-store"});
-   const payload=await response.json();
-   if(!response.ok||!payload?.access_token||!payload?.refresh_token)throw new Error(payload?.msg||payload?.message||"AUTH_REST_FAILED");
-   const {data,error}=await supabase.auth.setSession({access_token:payload.access_token,refresh_token:payload.refresh_token});
-   if(error||!data?.session)throw new Error(error?.message||"AUTH_SET_SESSION_FAILED");
-   renderSession(data.session);return data.session
-  }catch(fallbackError){
-   console.error("Emma auth:",clientError,fallbackError);
-   setStatus("ERROR DE CONEXIÓN");
-   throw new Error("AUTH: "+(fallbackError?.message||clientError?.message||"No se pudo autenticar Emma."));
-  }
+  const response=await fetch(CONFIG.supabaseUrl+"/auth/v1/signup",{method:"POST",headers:{"Content-Type":"application/json","apikey":CONFIG.supabasePublishableKey},body:"{}",cache:"no-store"});
+  const payload=await response.json();
+  if(!response.ok||!payload?.access_token||!payload?.refresh_token)throw new Error(payload?.msg||payload?.message||"AUTH_REST_FAILED");
+  const {data,error}=await withTimeout(supabase.auth.setSession({access_token:payload.access_token,refresh_token:payload.refresh_token}),8000,"AUTH_SET_SESSION_TIMEOUT");
+  if(error||!data?.session)throw new Error(error?.message||"AUTH_SET_SESSION_FAILED");
+  renderSession(data.session);
+  return data.session;
+ }catch(error){
+  console.error("Emma auth:",error);
+  setStatus("ERROR DE CONEXIÓN");
+  throw new Error("AUTH: "+(error?.message||"No se pudo autenticar Emma."));
  }
 }
 async function invoke(name,body){await ensureAuth();const {data,error}=await supabase.functions.invoke(name,{body});if(!error)return data;let detail="";try{if(error.context){const response=error.context instanceof Response?error.context:null;if(response){const clone=response.clone();try{const payload=await clone.json();detail=payload?.error||payload?.message||JSON.stringify(payload)}catch{detail=await response.text()}}}}catch{}throw new Error((detail||error.message||"Edge Function error").slice(0,800))}
