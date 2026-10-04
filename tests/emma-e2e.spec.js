@@ -28,6 +28,8 @@ test("Emma browser E2E 30 operational cycles", async ({ page }) => {
     await page.locator("#execute").click();
 
     await expect.poll(async () => (await assistants.allTextContents()).slice(before).some(t => t.trim().length > 0), { timeout: 15000 }).toBe(true);
+    await expect.poll(async () => (await page.locator("#orb-status").textContent())?.trim(), { timeout: 15000 }).not.toMatch(/CONECTANDO|ERROR|PENDIENTE/);
+    expect(await page.locator("#orb-status").textContent()).toMatch(/EMMA LISTA/);
     const texts = (await assistants.allTextContents()).slice(before).map(t => t.trim()).filter(Boolean);
     const text = texts[texts.length - 1] || "";
     const elapsed = Date.now() - started;
