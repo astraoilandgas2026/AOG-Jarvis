@@ -167,13 +167,13 @@ if(intent.type==="action"&&intent.tool==="mail.send"){const email=parseSendEmail
 if(intent.type==="tool"&&intent.tool==="mail.read"){const data=await invokeMail(q.match(/(?:busca|buscar|encuentra)\s+(.+)/i)?.[1]?"search":"list",{q:q.match(/(?:busca|buscar|encuentra)\s+(.+)/i)?.[1]||""});result.textContent=JSON.stringify(data,null,2);const reply=formatMail(data);addMessage("assistant",reply);speak(data?.count?(`Encontré ${data.count} correos.`):reply);return}
 if(intent.type==="tool"&&intent.tool&&intent.tool.startsWith("astra.")){const body=intent.tool==="astra.search_supplier"?{q:normalizeSupplierQuery(q),limit:10}:{q,limit:10};const data=await invokeTool(intent.tool,body);result.textContent=JSON.stringify(data,null,2);const answer=intent.tool==="document.intelligence"?JSON.stringify(analyzeDocuments(data?.data||data),null,2):intent.tool==="procurement.intelligence"?JSON.stringify(analyzeProcurement(data?.data||data),null,2):(intent.tool==="astra.context"||intent.tool==="astra.intelligence")?formatSupplierIntelligence(data?.data||data):"Contexto Astra consultado y disponible en resultados para: "+q;addMessage("assistant",answer);speak(answer);return}
 if(intent.type==="tool"&&intent.tool==="local.browser"){
- const match=q.match(/https?:\\/\\/[^\\s]+/i);
+ const match=q.match(/https?:\/\/[^\s]+/i);
  if(!localBridge)throw new Error("LOCAL_BRIDGE_OFFLINE: instala/inicia Emma Local Bridge en este equipo.");
  if(!match)throw new Error("LOCAL_BROWSER_URL_REQUIRED: indica una URL http(s).");
  const opened=await bridgeCommand(localBridge,"browser/open",{url:match[0]});
  const data=await bridgeCommand(localBridge,"browser/analyze",{});
  result.textContent=JSON.stringify(data,null,2);
- const answer="Navegador local conectado.\\n"+(data.title||opened.title||"Página sin título")+"\\n"+(data.url||opened.url);
+ const answer="Navegador local conectado.\n"+(data.title||opened.title||"Página sin título")+"\n"+(data.url||opened.url);
  addMessage("assistant",answer);speak(answer);return;
 }
 if(intent.type==="tool"&&intent.tool){const data=intent.tool==="github.read"?await invokeGitHub(q):await invokeTool(intent.tool,intent.tool==="astra.search_supplier"?{q:normalizeSupplierQuery(q),limit:10}:{q,limit:10});const output=JSON.stringify(data,null,2);result.textContent=output;let reply;if(intent.tool==="github.read"&&data?.ok&&data?.content)reply="Leí "+(data.path||"el archivo")+" del repositorio. El contenido quedó visible en el panel de resultados.";else reply=data?.count?"Encontré "+data.count+" resultado"+(data.count===1?"":"s")+".":"No encontré resultados.";addMessage("assistant",reply);speak(reply);return}
