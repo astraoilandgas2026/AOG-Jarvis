@@ -41,7 +41,7 @@ async function orchestrateQuery(q){
  const kind=/correo|email|gmail/.test(lower)?"email":/calendario|reunión|reunion|agenda/.test(lower)?"calendar":/github|código|codigo|repo/.test(lower)?"project":/documento|coa|sds|iscc|ficha/.test(lower)?"documents":"supplier";
  const intentMap={supplier:["astra.intelligence","document.intelligence","procurement.intelligence"],email:["gmail.read"],calendar:["calendar.read"],project:["github.read"],documents:["astra.documents","document.intelligence","procurement.intelligence"]};
  const planned=rankTools(intentMap[kind].map(id=>getTool(id)).filter(Boolean));
- const ctx=planExecution({query:q,tools:planned.map(t=>t.id),registry:executionRegistry()});
+ const runtime=buildEmmaRuntime(q,{externalData:true,parallelizable:true});\n const ctx=planExecution({query:q,tools:planned.map(t=>t.id),registry:executionRegistry(),route:runtime.route,budget:runtime.budget});
  const settled=await Promise.allSettled(planned.map(async t=>{
    if(t.id==="github.read")return{id:t.id,data:await invokeGitHub(q)};
    return{id:t.id,data:await invokeTool(t.id,{q,limit:10})};
