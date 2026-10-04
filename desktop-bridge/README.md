@@ -1,15 +1,36 @@
 # Emma Local Bridge
 
-This is the local companion that gives the GitHub Pages Emma app a controlled connection to the user's computer.
+Local runtime that gives Emma a controlled browser lane on the user's computer.
 
-Capabilities:
-- visible Chromium session
-- open and inspect HTTP(S) pages
-- screenshots
-- click/fill actions
-- localhost-only binding
-- per-process random authentication token
+## What it provides
 
-The bridge deliberately does not expose arbitrary shell execution, unrestricted filesystem access, payments, banking, or destructive system commands.
+- Persistent Chromium profile for logged-in web sessions.
+- Navigate, inspect, click, fill and screenshot web pages.
+- Local-only listener on `127.0.0.1`.
+- Origin allowlist plus pairing token.
+- Automatic Windows startup after the one-time installer.
+- No arbitrary shell execution.
+- No payment, banking or financial transaction commands.
 
-For broad web automation, Emma can use a browser-agent adapter such as Browser Use rather than embedding an unrestricted computer-control API in the public web app.
+## Windows
+
+1. Install Node.js 20+.
+2. Run `install-windows.ps1` once.
+3. The installer installs Playwright Chromium and registers Emma's bridge in the Windows Startup folder.
+4. Emma discovers the bridge automatically when the web app is open.
+
+The browser profile is stored in `%USERPROFILE%\\.emma\\browser-profile`.
+
+## Browser lane
+
+The bridge uses a persistent Chromium profile so Emma can work with sessions you explicitly establish in that browser. It is deliberately separate from your normal Chrome profile.
+
+## Security boundary
+
+The bridge listens only on localhost, validates the web origin, and requires a per-process pairing token. It exposes explicit browser commands rather than arbitrary operating-system execution.
+
+## Architecture
+
+Emma Web → Smart Router → Adapter Registry → Local Bridge → Persistent Chromium.
+
+This is the first local-computer adapter. Files, desktop apps and screen control should be added as separate scoped adapters with their own permissions and evidence rules.
