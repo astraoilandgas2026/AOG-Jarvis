@@ -1,5 +1,5 @@
 import { classifyIntent } from "./intent-router.js";
-import { routeTask, buildExecutionBudget, shouldSkipLLM, ROUTER_VERSION } from "../../core/smart-router.js";
+import { routeTask, buildExecutionBudget, shouldSkipLLM, ROUTER_VERSION } from "./smart-router.js";
 
 export function buildEmmaRuntime(query="",context={}){
   const intent=classifyIntent(query);
