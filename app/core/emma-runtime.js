@@ -7,7 +7,8 @@ export function buildEmmaRuntime(query="",context={}){
     requiresEvidence:Boolean(context.requiresEvidence||intent.type==="research"||intent.tool==="astra.dd"||intent.tool==="document.intelligence"||intent.tool==="procurement.intelligence"),
     externalData:Boolean(context.externalData||intent.type==="research"),
     highRisk:Boolean(context.highRisk||intent.requiresConfirmation),
-    toolRequired:Boolean(intent.tool),\n    deterministicTool:Boolean(intent.tool&&/^astra\\./.test(intent.tool)&&intent.type==="tool"),
+    toolRequired:Boolean(intent.tool),
+    deterministicTool:Boolean(intent.tool&&/^astra\\./.test(intent.tool)&&intent.type==="tool"),
     parallelizable:Boolean(context.parallelizable)
   });
   const budget=buildExecutionBudget(route);
