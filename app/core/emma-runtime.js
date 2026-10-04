@@ -8,6 +8,7 @@ export function buildEmmaRuntime(query="",context={}){
     externalData:Boolean(context.externalData||intent.type==="research"),
     highRisk:Boolean(context.highRisk||intent.requiresConfirmation),
     toolRequired:Boolean(intent.tool),
+    sourceOfTruth:Boolean(intent.tool&&intent.tool.startsWith("astra.")),
     deterministicTool:Boolean(intent.tool&&/^astra\\./.test(intent.tool)&&intent.type==="tool"),
     parallelizable:Boolean(context.parallelizable)
   });
