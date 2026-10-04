@@ -45,13 +45,12 @@ async function withTimeout(promise,ms,label){let timer;try{return await Promise.
 async function ensureAuth(){
  setStatus("CONECTANDO EMMA");
  try{
-  const response=await fetch(CONFIG.supabaseUrl+"/auth/v1/signup",{method:"POST",headers:{"Content-Type":"application/json","apikey":CONFIG.supabasePublishableKey},body:"{}",cache:"no-store"});
-  const payload=await response.json();
-  if(!response.ok||!payload?.access_token||!payload?.refresh_token)throw new Error(payload?.msg||payload?.message||"AUTH_REST_FAILED");
-  const {data,error}=await withTimeout(supabase.auth.setSession({access_token:payload.access_token,refresh_token:payload.refresh_token}),8000,"AUTH_SET_SESSION_TIMEOUT");
-  if(error||!data?.session)throw new Error(error?.message||"AUTH_SET_SESSION_FAILED");
-  renderSession(data.session);
-  return data.session;
+  const current=await withTimeout(supabase.auth.getSession(),8000,"AUTH_SESSION_TIMEOUT");
+  if(current.data?.session){renderSession(current.data.session);return current.data.session}
+  const anon=await withTimeout(supabase.auth.signInAnonymously(),10000,"AUTH_ANON_TIMEOUT");
+  if(anon.error||!anon.data?.session)throw new Error(anon.error?.message||"AUTH_ANON_FAILED");
+  renderSession(anon.data.session);
+  return anon.data.session;
  }catch(error){
   console.error("Emma auth:",error);
   setStatus("ERROR DE CONEXIÓN");
@@ -202,5 +201,5 @@ supabase.auth.onAuthStateChange((_event,session)=>renderSession(session));
 const {data:{session}}=await supabase.auth.getSession();
 if(session)renderSession(session);else{setStatus("CONECTANDO EMMA");try{await ensureAuth()}catch(error){setStatus("CONFIGURACIÓN DE ACCESO PENDIENTE");console.error("Anonymous auth unavailable",error)}}
 setTimeout(()=>{invoke("jarvis-voice",{setup_voice:true}).catch(()=>{})},0);
-if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=16").catch(()=>{});
+if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=27",{updateViaCache:"none"}).catch(()=>{});
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;install.classList.remove("hidden")});install.onclick=async()=>{if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;install.classList.add("hidden")};
