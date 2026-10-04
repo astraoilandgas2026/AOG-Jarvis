@@ -36,7 +36,7 @@ export function routeTask(input, context = {}) {
 
   const verification = tier==="deep" ? "required" :
     tier==="standard" && (hasWeb || hasEvidence) ? "required" : "none";
-  const parallel = tier==="deep" && (hasWeb || hasMultiStep || context.parallelizable===true);
+  const parallel = Boolean(tier==="deep" && (hasWeb || hasMultiStep || context.parallelizable===true));
   const reason = deep ? (hasProcurementDeep ? "procurement_dd" : "multi_step_or_evidence") :
     standard ? "tool_or_external_data" : hasSimpleLookup ? "deterministic_lookup" : "simple_request";
 
