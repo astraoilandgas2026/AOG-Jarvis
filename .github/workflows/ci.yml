@@ -22,7 +22,7 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Type-check critical Emma functions
+      - name: Run deterministic Emma routing tests\n        run: deno test --no-config core/smart-router.test.js app/core/emma-runtime.test.js\n\n      - name: Type-check critical Emma functions
         run: |
           set -euo pipefail
           deno check --no-config supabase/functions/jarvis-chat/index.ts
