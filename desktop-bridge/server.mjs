@@ -15,7 +15,7 @@ let page=null;
 function corsOrigin(req){const origin=req.headers.origin||"";return ALLOWED_ORIGINS.has(origin)?origin:"null"}
 function json(res,status,data,req){
   const body=JSON.stringify(data);
-  res.writeHead(status,{"Content-Type":"application/json","Access-Control-Allow-Origin":corsOrigin(req),"Access-Control-Allow-Credentials":"true","Access-Control-Allow-Headers":"Content-Type, X-Emma-Token","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Vary":"Origin"});
+  res.writeHead(status,{"Content-Type":"application/json","Access-Control-Allow-Origin":corsOrigin(req),"Access-Control-Allow-Credentials":"true","Access-Control-Allow-Headers":"Content-Type, X-Emma-Token","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Private-Network":"true","Vary":"Origin"});
   res.end(body);
 }
 function auth(req){return req.headers["x-emma-token"]===TOKEN}
