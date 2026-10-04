@@ -41,7 +41,31 @@ async function addArtifactMessage(artifact){const {renderArtifact}=await import(
 function renderModules(){modulesNav.innerHTML="";Object.entries(modules).forEach(([key,m])=>{const b=document.createElement("button");b.textContent=m.label;b.dataset.module=key;b.className=key===activeModule?"active":"";b.onclick=()=>selectModule(key);modulesNav.appendChild(b)})}
 function selectModule(key){activeModule=modules[key]?key:"conversation";moduleTitle.textContent=modules[activeModule].label;moduleContent.innerHTML="<p class='module-description'>"+modules[activeModule].description+"</p>";modulesNav.querySelectorAll("button").forEach(b=>b.classList.toggle("active",b.dataset.module===activeModule))}
 function renderSession(session){const signed=Boolean(session?.user);home.classList.remove("hidden");chat.classList.remove("hidden");logout.classList.toggle("hidden",!signed);home.classList.toggle("compact",!signed);if(signed)setStatus("EMMA LISTA");else setStatus("EMMA LISTA · MODO BÁSICO")}
-async function ensureAuth(){const {data,error:sessionError}=await supabase.auth.getSession();if(sessionError)throw new Error("AUTH_SESSION: "+sessionError.message);if(data?.session?.access_token)return data.session;setStatus("CONECTANDO EMMA");const {data:anon,error}=await supabase.auth.signInAnonymously();if(error||!anon?.session)throw new Error("AUTH_ANON: "+(error?.message||"No se pudo autenticar la sesión anónima."));renderSession(anon.session);return anon.session}
+async function withTimeout(promise,ms,label){let timer;try{return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(label)),ms)})])}finally{clearTimeout(timer)}}
+async function ensureAuth(){
+ setStatus("CONECTANDO EMMA");
+ try{
+  const {data,error:sessionError}=await withTimeout(supabase.auth.getSession(),5000,"AUTH_SESSION_TIMEOUT");
+  if(sessionError)throw new Error("AUTH_SESSION: "+sessionError.message);
+  if(data?.session?.access_token){renderSession(data.session);return data.session}
+  const {data:anon,error}=await withTimeout(supabase.auth.signInAnonymously(),8000,"AUTH_ANON_TIMEOUT");
+  if(error||!anon?.session)throw new Error("AUTH_ANON: "+(error?.message||"No se pudo autenticar la sesión anónima."));
+  renderSession(anon.session);return anon.session
+ }catch(clientError){
+  try{
+   const response=await fetch(CONFIG.supabaseUrl+"/auth/v1/signup",{method:"POST",headers:{"Content-Type":"application/json","apikey":CONFIG.supabasePublishableKey},body:JSON.stringify({}),cache:"no-store"});
+   const payload=await response.json();
+   if(!response.ok||!payload?.access_token||!payload?.refresh_token)throw new Error(payload?.msg||payload?.message||"AUTH_REST_FAILED");
+   const {data,error}=await supabase.auth.setSession({access_token:payload.access_token,refresh_token:payload.refresh_token});
+   if(error||!data?.session)throw new Error(error?.message||"AUTH_SET_SESSION_FAILED");
+   renderSession(data.session);return data.session
+  }catch(fallbackError){
+   console.error("Emma auth:",clientError,fallbackError);
+   setStatus("ERROR DE CONEXIÓN");
+   throw new Error("AUTH: "+(fallbackError?.message||clientError?.message||"No se pudo autenticar Emma."));
+  }
+ }
+}
 async function invoke(name,body){await ensureAuth();const {data,error}=await supabase.functions.invoke(name,{body});if(!error)return data;let detail="";try{if(error.context){const response=error.context instanceof Response?error.context:null;if(response){const clone=response.clone();try{const payload=await clone.json();detail=payload?.error||payload?.message||JSON.stringify(payload)}catch{detail=await response.text()}}}}catch{}throw new Error((detail||error.message||"Edge Function error").slice(0,800))}
 async function invokeContext(q){if(isOffline()){const snap=await loadSnapshot();if(snap?.data)return{data:snap.data,offline:true,saved_at:snap.saved_at};throw new Error("OFFLINE_NO_SNAPSHOT")}const data=await invokeTool("emma.core",{q,limit:8});await saveSnapshot(data?.data||data);return data}
 async function getGlobalContext(q){try{return await invokeContext(q)}catch{return null}}
