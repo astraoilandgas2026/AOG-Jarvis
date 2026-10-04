@@ -1,6 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.105.0";
 import { CONFIG } from "./config.js";
 import { createOrb } from "./modules/orb.js";
+import { chooseOrb } from "./modules/orb-personality.js";
+import { discoverLocalBridge } from "./modules/local-bridge.js";
+import { registerAdapter, listAdapters } from "./modules/adapter-registry.js";
+import { autonomyPolicy } from "./modules/evidence-policy.js";
 import { createVoice, detectLanguage, normalizeVoiceText } from "./modules/voice.js";
 import { getTool, TOOL_REGISTRY } from "./core/tool-registry.js?v=27";
 import { buildEmmaRuntime } from "./core/emma-runtime.js?v=1";
@@ -20,7 +24,12 @@ const logout=$("#logout"),install=$("#install"),result=$("#result")||document.cr
 let voice=null;
 let audioContext=null;
 function primeAudio(){try{if(!audioContext)audioContext=new (window.AudioContext||window.webkitAudioContext)();if(audioContext.state==="suspended")audioContext.resume().catch(()=>{});return true}catch{return false}}
+const orbChoice=chooseOrb("strategic analytical procurement oracle");
 const orb=createOrb({root:$("#orb"),status:$("#orb-status"),onActivate:()=>voice?.start()});
+orb.setAppearance?.(orbChoice);
+document.documentElement.dataset.emmaOrb=orbChoice.id;
+let localBridge=null;
+discoverLocalBridge().then(b=>{localBridge=b;registerAdapter({id:"local-computer",name:"Emma Local Computer",kind:"desktop",status:b?"connected":"offline",capabilities:["browser","files","apps","screen"] ,connect:async()=>b});}).catch(()=>{});
 voice=createVoice({orb,onTranscript:t=>{const normalized=normalizeVoiceText(t);command.value=normalized;execute(normalized)},onError:e=>setStatus(e)});
 let deferredInstall=null,history=[];
 function setStatus(text){$("#orb-status").textContent=text}
