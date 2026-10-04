@@ -19,7 +19,7 @@ export function routeTask(input, context = {}) {
   if (!text) return { tier:"fast", reason:"empty_input", parallel:false, verification:"none", estimatedCostUnits:1, confidence:1 };
 
   const hasWeb=hit(text,WORDS.web), hasEvidence=hit(text,WORDS.evidence);
-  const hasMultiStep=hit(text,WORDS.multiStep), hasExecution=hit(text,WORDS.execution);
+  const hasMultiStep=hit(text,WORDS.multiStep), hasExecution=hit(text,WORDS.execution), hasProcurementDeep=hit(text,WORDS.procurementDeep);
   const hasRealtime=hit(text,WORDS.realtime), hasSimpleLookup=hit(text,WORDS.simpleLookup);
   const needsVerification=context.requiresEvidence===true || context.externalData===true || context.highRisk===true;
 
