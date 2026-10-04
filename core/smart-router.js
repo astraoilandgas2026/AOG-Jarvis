@@ -26,8 +26,10 @@ export function routeTask(input, context = {}) {
 
   const deep = hasProcurementDeep ||
     hasEvidence + hasMultiStep + (needsVerification ? 1 : 0) >= 2 ||
-    (hasWeb && hasMultiStep) || (hasExecution && context.highRisk===true);
-  const standard = !deep && (hasWeb || hasExecution || hasRealtime || context.highRisk===true || (context.toolRequired===true && context.deterministicTool!==true));
+    (hasWeb && hasMultiStep) ||
+    (hasMultiStep && context.parallelizable===true) ||
+    (hasExecution && context.highRisk===true);
+  const standard = !deep && (hasWeb || hasExecution || hasRealtime || context.highRisk===true || (context.toolRequired===true && context.deterministicTool!==true && context.sourceOfTruth!==true));
   let tier = deep ? "deep" : standard ? "standard" : "fast";
 
   if (hasEvidence || context.requiresEvidence===true) tier = tier==="fast" ? "standard" : tier;
