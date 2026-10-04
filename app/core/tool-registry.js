@@ -44,7 +44,8 @@ export const TOOL_REGISTRY=Object.freeze({
  "gmail.send":{id:"gmail.send",label:"Enviar Gmail",module:"gmail",permission:"write",functionName:null,description:"Envía Gmail mediante el puente autorizado; requiere confirmación explícita."},
  "calendar.read":{id:"calendar.read",label:"Google Calendar",module:"calendar",permission:"read",functionName:null,description:"Consulta Google Calendar mediante el puente autorizado."},
  "calendar.create":{id:"calendar.create",label:"Crear evento Calendar",module:"calendar",permission:"write",functionName:null,description:"Crea eventos en Google Calendar; requiere confirmación explícita."},
- "files.read":{id:"files.read",label:"Archivos",module:"files",permission:"read",functionName:null,description:"Conector preparado."}
+ "files.read":{id:"files.read",label:"Archivos",module:"files",permission:"read",functionName:null,description:"Conector preparado."},
+ "local.browser":{id:"local.browser",label:"Emma Local Browser",module:"local",permission:"write",functionName:null,description:"Controla el navegador local emparejado de Emma con comandos explícitos y auditables."}
 });
 export function getTool(id){return TOOL_REGISTRY[id]||null}
 export function listTools({module=null,permission=null}={}){return Object.values(TOOL_REGISTRY).filter(t=>(!module||t.module===module)&&(!permission||t.permission===permission))}
