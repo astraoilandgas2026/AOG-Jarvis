@@ -27,8 +27,9 @@ export function classifyIntent(text=""){
  if(/follow.?up|seguimiento|pendiente|próxima acción|proxima accion/.test(q))return{type:"tool",module:"astra",tool:"astra.followups"};
  if(/qué tenemos|que tenemos|qué sabemos|que sabemos|todo sobre|dame todo|historial completo|estado completo/.test(q)&&/proveedor|olam|renovar|óleos|oleos|supplier/.test(q))return{type:"tool",module:"astra",tool:"astra.intelligence"};
  if(/busca|buscar|encuentra|proveedor|olam|renovar|óleos|oleos|cnpj/.test(q))return{type:"tool",module:"astra",tool:"astra.search_supplier"};
+ if(/(?:abre|abrir|navega|navegar|visita|revisa|revisar|analiza|analizar).*(?:https?:\/\/|web|página|pagina|sitio|website)/.test(q)||/https?:\/\//.test(q)&&/(?:abre|revisa|analiza|navega|visita)/.test(q))return{type:"tool",module:"local",tool:"local.browser"};
+ if(/(?:abre|abrir|navega|navegar|visita|revisa|revisar|analiza|analizar).*(?:https?:\/\/|web|página|pagina|sitio|website)/.test(q)||/https?:\/\//.test(q)&&/(?:abre|revisa|analiza|navega|visita)/.test(q))return{type:"tool",module:"local",tool:"local.browser"};
  if(/resume|resumen|resúmeme|analiza|explica/.test(q))return{type:"conversation",module:"conversation",task:"summarize"};
- if(/(?:abre|abrir|navega|navegar|visita|revisa|revisar|analiza|analizar).*(?:https?:\\/\\/|web|página|pagina|sitio|website)/.test(q)||/https?:\\/\\//.test(q)&&/(?:abre|revisa|analiza|navega|visita)/.test(q))return{type:"tool",module:"local",tool:"local.browser"};
  if(/github|repositorio|repo|archivo del proyecto|código del proyecto/.test(q))return{type:"tool",module:"github",tool:"github.read"};
  if(/investiga|internet|web|fuentes/.test(q))return{type:"research",module:"research"};
  if(/agrega|añade|crea|actualiza|modifica|elimina|envía|manda/.test(q))return{type:"action",module:"automation",requiresConfirmation:true};
