@@ -1,8 +1,8 @@
 import { bridgeCommand } from "./local-bridge.js";
-const BLOCKED_HOSTS=/^(?:google\\.|www\\.google\\.|youtube\\.com|www\\.youtube\\.com|facebook\\.com|www\\.facebook\\.com|instagram\\.com|www\\.instagram\\.com|x\\.com|www\\.x\\.com)$/i;
+const BLOCKED_HOSTS=/^(?:google\.|www\.google\.|youtube\.com|www\.youtube\.com|facebook\.com|www\.facebook\.com|instagram\.com|www\.instagram\.com|x\.com|www\.x\.com)$/i;
 const normalizeUrl=u=>{try{return new URL(u).toString()}catch{return null}};
-function scoreSource(source){const text=String(source.text||"").replace(/\\s+/g," ").trim();return Math.min(100,(source.title?15:0)+(text.length>=300?30:0)+(/company|empresa|about|contact|products?|servicios?|producto/i.test(text)?20:0)+(/certificate|certificado|specification|especificación|capacity|capacidad|facility|planta|address|dirección/i.test(text)?35:0));}
-function dedupe(candidates){const seen=new Set();return candidates.filter(c=>{const u=normalizeUrl(c.url);if(!u)return false;const url=new URL(u);const key=url.hostname.replace(/^www\\./i,"")+url.pathname.replace(/\\/$/,"");if(seen.has(key)||BLOCKED_HOSTS.test(url.hostname))return false;seen.add(key);return true});}
+function scoreSource(source){const text=String(source.text||"").replace(/\s+/g," ").trim();return Math.min(100,(source.title?15:0)+(text.length>=300?30:0)+(/company|empresa|about|contact|products?|servicios?|producto/i.test(text)?20:0)+(/certificate|certificado|specification|especificación|capacity|capacidad|facility|planta|address|dirección/i.test(text)?35:0));}
+function dedupe(candidates){const seen=new Set();return candidates.filter(c=>{const u=normalizeUrl(c.url);if(!u)return false;const url=new URL(u);const key=url.hostname.replace(/^www\./i,"")+url.pathname.replace(/\\/$/,"");if(seen.has(key)||BLOCKED_HOSTS.test(url.hostname))return false;seen.add(key);return true});}
 export async function runResearchAgent({bridge,query,invokeTool,limit=8}){
  const searchUrl="https://www.google.com/search?q="+encodeURIComponent(query);
  const search=await bridgeCommand(bridge,"browser/open",{url:searchUrl});
