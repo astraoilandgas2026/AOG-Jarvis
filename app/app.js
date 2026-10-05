@@ -135,6 +135,10 @@ function parseSendEmail(q){const match=q.match(/(?:envía|envia|manda|mandar)\s+
 function formatMail(data){const rows=data?.data||[];if(!rows.length)return data?.mailbox?"No hay correos que coincidan en "+data.mailbox+".":"No encontré correos.";return rows.slice(0,10).map((m,i)=>`${i+1}. ${m.subject||"(sin asunto)"} — ${m.from?.address||"remitente desconocido"} — ${m.date?new Date(m.date).toLocaleString("es-CL"): ""} [UID ${m.uid}]`).join("\n")}
 async function handleOperationalCommand(q){
  const l=q.toLowerCase();
+ if(l.includes("personalidad emma")||l.includes("quién eres")||l.includes("quien eres")){const p=getEmmaPersonality();addMessage("assistant","Soy Emma: "+p.role+". Perfil: "+p.traits.join(", ")+". Trabajo con evidencia y separo lo reclamado de lo verificado.");return true}
+ if(l.includes("backup")||l.includes("respaldo")){if(!localBridge)throw new Error("LOCAL_BRIDGE_OFFLINE");const data=await bridgeCommand(localBridge,"backup/create",{});result.textContent=JSON.stringify(data,null,2);addMessage("assistant","Respaldo local creado en la computadora. "+data.files+" archivos.");return true}
+
+ const l=q.toLowerCase();
  if(l.includes("estado emma")||l.includes("status emma")){
   const data={adapters:listAdapters(),local_bridge:Boolean(localBridge),tools:Object.keys(TOOL_REGISTRY).length};
   result.textContent=JSON.stringify(data,null,2);addMessage("assistant",localBridge?"Emma operativa. Browser local conectado.":"Emma operativa. Browser local offline.");return true;
