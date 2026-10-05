@@ -15,7 +15,6 @@ import { analyzeProcurement } from "./modules/procurement-intelligence.js";
 import { buildExecutionPlan } from "./core/execution-plan.js";
 import { planExecution, executionResult } from "./core/execution-orchestrator.js";
 import { automationPlan } from "./core/automation-engine.js";
-import { buildSearchUrl, buildResearchBundle, formatResearchResult } from "./modules/operational-agent.js";
 import { rankTools, PERFORMANCE_RULE } from "./core/performance-engine.js";
 import { saveSnapshot, loadSnapshot, isOffline } from "./core/offline-core.js";
 const supabase=createClient(CONFIG.supabaseUrl,CONFIG.supabasePublishableKey);
@@ -146,9 +145,6 @@ if(intent.type==="memory_write"){
  const answer=data?.ok?"Memoria anotada y guardada.":"No se pudo guardar la memoria.";
  addMessage("assistant",answer);speak(answer);return;
 }
-if(intent.type==="memory_read"){const data=await invokeTool("memory.read",{q:q,limit:8});result.textContent=JSON.stringify(data,null,2);const answer=data?.count?data.data.map((m,i)=>(i+1)+". "+m.content).join("\\n"):"No tengo memorias relevantes registradas.";addMessage("assistant",answer);speak("Memoria consultada.");return}
-if(intent.type==="memory_update"){const found=await invokeTool("memory.read",{q:q,limit:3});const target=found?.data?.[0];if(!target)throw new Error("MEMORY_NOT_FOUND");const data=await invokeTool("memory.update",{memory_id:target.id,q:q});const answer=data?.ok?"Memoria actualizada.":"No se pudo actualizar la memoria.";addMessage("assistant",answer);speak(answer);return}
-if(intent.type==="memory_deactivate"){const found=await invokeTool("memory.read",{q:q,limit:3});const target=found?.data?.[0];if(!target)throw new Error("MEMORY_NOT_FOUND");if(!window.confirm("Desactivar esta memoria?\\n\\n"+target.content)){addMessage("assistant","Desactivación cancelada.");return}const data=await invokeTool("memory.deactivate",{memory_id:target.id});const answer=data?.ok?"Memoria desactivada.":"No se pudo desactivar la memoria.";addMessage("assistant",answer);speak(answer);return}
 if(intent.type==="task_create"){
  const title=parseTaskTitle(q);
  const dueAt=parseDueAt(q);
@@ -166,28 +162,9 @@ if(intent.type==="task_list"){
  }
  addMessage("assistant",answer);speak(answer);return;
 }
-if(intent.tool==="emma.status"){
- const status={version:"operational-layer-1",router:runtime.route,adapters:listAdapters(),local_bridge:localBridge?{connected:true,url:localBridge.url,health:localBridge.health}:null,tools:Object.keys(TOOL_REGISTRY).length,capabilities:{astra:true,memory:true,tasks:true,automation:true,local_browser:Boolean(localBridge),research:Boolean(localBridge),email:true,calendar:true}};
- result.textContent=JSON.stringify(status,null,2);
- const answer=localBridge?"Emma operativa. Browser local conectado; Astra, memoria, tareas, automatizaciones y evidencia disponibles.":"Emma operativa. Astra, memoria, tareas y automatizaciones disponibles; Browser local offline.";
- addMessage("assistant",answer);speak(answer);return;
-}
 if(intent.tool==="execution.plan"){const kind=/correo|email|gmail/.test(q)?"email":/calendario|reunión|reunion|agenda/.test(q)?"calendar":/github|código|codigo|repo/.test(q)?"project":/documento|coa|sds|iscc|ficha/.test(q)?"documents":"supplier";const data=buildExecutionPlan(kind,executionRegistry());result.textContent=JSON.stringify(data,null,2);addMessage("assistant",`Plan ${kind} listo: ${data.steps.length} pasos, priorizando herramientas existentes y cero LLM innecesario.`);return}
 if(intent.tool==="execution.orchestrator"){const data=await orchestrateQuery(q);result.textContent=JSON.stringify(data,null,2);const ok=data.status==="completed";const answer=ok?"Orquestación ejecutada: "+data.steps.length+" pasos reales, sin LLM innecesario.":"Orquestación parcial: "+data.steps.length+" pasos, revisa los errores en resultados.";addMessage("assistant",answer);speak(answer);return}
-if(intent.tool==="automation.list"){const data=await invokeTool("automation.list",{limit:10});result.textContent=JSON.stringify(data,null,2);const answer=data?.count?"Tienes "+data.count+" automatizaciones activas.":"No tienes automatizaciones activas.";addMessage("assistant",answer);speak(answer);return}
-if(intent.tool==="automation.plan"){const data=automationPlan(q);result.textContent=JSON.stringify(data,null,2);if(!data.supported){const answer="No puedo programar esa recurrencia todavía: "+data.reason;addMessage("assistant",answer);speak(answer);return}if(/programa|programar|automatiza|automatización|automatizacion/i.test(q)){const saved=await invokeTool("automation.save",{q:data.prompt,cadence:data.cadence,cron_expression:data.cron,name:"Emma · "+data.prompt.slice(0,120)});const answer=saved?.ok?"Automatización guardada: "+data.cadence+".":"No se pudo guardar la automatización.";addMessage("assistant",answer);speak(answer);return}const answer="Recurrencia detectada: "+data.cadence+". Dime \"programa\" y la dejo persistente.";addMessage("assistant",answer);speak(answer);return}
-if(intent.type==="research"){
- if(!localBridge)throw new Error("LOCAL_BRIDGE_OFFLINE");
- const researchQuery=q.replace(/^(?:emma[,\\s]*)?(?:investiga|investigar|busca en internet|busca en la web|averigua)\\s*/i,"").trim()||q;
- const opened=await bridgeCommand(localBridge,"browser/open",{url:buildSearchUrl(researchQuery)});
- const data=await bridgeCommand(localBridge,"browser/analyze",{});
- const links=await bridgeCommand(localBridge,"browser/links",{});
- const bundle=buildResearchBundle({query:researchQuery,title:data.title||opened.title,url:data.url||opened.url,text:data.text,links:links.links||[]});
- try{await invokeTool("emma.research.save",{q:bundle.content_excerpt,source_type:"web",source_ref:bundle.source_url||researchQuery,source_url:bundle.source_url,title:bundle.title,content_excerpt:bundle.content_excerpt,evidence_level:"documented",retrieved_at:bundle.retrieved_at,metadata:{query:researchQuery,links:bundle.links}})}catch(saveError){console.warn("Research persistence",saveError)}
- result.textContent=formatResearchResult(bundle);
- const answer="Investigación web ejecutada y guardada como DOCUMENTED.\\n"+formatResearchResult(bundle);
- addMessage("assistant",answer);speak("Investigación ejecutada y guardada.");return;
-}
+if(intent.tool==="automation.plan"){const data=automationPlan(q);result.textContent=JSON.stringify(data,null,2);const answer=data.supported?"Recurrencia detectada: "+data.cadence+". Plan listo para persistir/programar.":"No puedo programar esa recurrencia todavía: "+data.reason;addMessage("assistant",answer);speak(answer);return}
 if(intent.tool==="gmail.read"){const data=await invokeGoogle("gmail.list",{query:q.match(/(?:busca|buscar|encuentra)\s+(.+)/i)?.[1]||"in:inbox",max:10});result.textContent=JSON.stringify(data,null,2);const reply=data?.count?`Encontré ${data.count} correos en Gmail.`:"No encontré correos en Gmail.";addMessage("assistant",reply);speak(reply);return}
 if(intent.type==="action"&&intent.tool==="gmail.send"){const m=q.match(/(?:gmail.*?)(?:a|para)\s+([^\s]+).*?(?:asunto|subject)\s*[:=-]\s*(.+?)\s+(?:cuerpo|body|mensaje)\s*[:=-]\s*([\s\S]+)$/i);if(!m)throw new Error("Formato: Gmail a EMAIL asunto: ASUNTO cuerpo: MENSAJE");if(!window.confirm(`Enviar Gmail a ${m[1]}?\n\nAsunto: ${m[2]}`)){addMessage("assistant","Envío cancelado.");return}const data=await invokeGoogle("gmail.send",{to:m[1],subject:m[2].trim(),text:m[3].trim()});result.textContent=JSON.stringify(data,null,2);addMessage("assistant",data?.sent?"Gmail enviado.":"No se confirmó el envío.");speak(data?.sent?"Gmail enviado.":"No se confirmó el envío.");return}
 if(intent.tool==="calendar.read"){const data=await invokeGoogle("calendar.list",{});result.textContent=JSON.stringify(data,null,2);const reply=data?.count?`Encontré ${data.count} eventos en tu calendario.`:"No hay eventos en el período consultado.";addMessage("assistant",reply);speak(reply);return}
@@ -206,7 +183,17 @@ if(intent.type==="action"&&intent.task==="generate_document"){const {generateDoc
 if(intent.type==="action"&&intent.tool==="mail.send"){const email=parseSendEmail(q);if(!email)throw new Error("Formato: envía un correo a EMAIL asunto: ASUNTO cuerpo: MENSAJE");if(!window.confirm(`Enviar desde Astra a ${email.to[0]}?\n\nAsunto: ${email.subject}`)){addMessage("assistant","Envío cancelado.");return}const data=await invokeMail("send",email);result.textContent=JSON.stringify(data,null,2);const reply=data?.sent?"Correo enviado desde "+data.mailbox+".":"No se confirmó el envío.";addMessage("assistant",reply);speak(reply);return}
 if(intent.type==="tool"&&intent.tool==="mail.read"){const data=await invokeMail(q.match(/(?:busca|buscar|encuentra)\s+(.+)/i)?.[1]?"search":"list",{q:q.match(/(?:busca|buscar|encuentra)\s+(.+)/i)?.[1]||""});result.textContent=JSON.stringify(data,null,2);const reply=formatMail(data);addMessage("assistant",reply);speak(data?.count?(`Encontré ${data.count} correos.`):reply);return}
 if(intent.type==="tool"&&intent.tool&&intent.tool.startsWith("astra.")){const body=intent.tool==="astra.search_supplier"?{q:normalizeSupplierQuery(q),limit:10}:{q,limit:10};const data=await invokeTool(intent.tool,body);result.textContent=JSON.stringify(data,null,2);const answer=intent.tool==="document.intelligence"?JSON.stringify(analyzeDocuments(data?.data||data),null,2):intent.tool==="procurement.intelligence"?JSON.stringify(analyzeProcurement(data?.data||data),null,2):(intent.tool==="astra.context"||intent.tool==="astra.intelligence")?formatSupplierIntelligence(data?.data||data):"Contexto Astra consultado y disponible en resultados para: "+q;addMessage("assistant",answer);speak(answer);return}
-if(intent.type==="tool"&&intent.tool==="local.browser"){\n const match=q.match(/https?:\/\/[^\s]+/i);\n if(!localBridge)throw new Error("LOCAL_BRIDGE_OFFLINE");\n if(!match)throw new Error("LOCAL_BROWSER_URL_REQUIRED");\n const opened=await bridgeCommand(localBridge,"browser/open",{url:match[0]});\n const data=await bridgeCommand(localBridge,"browser/analyze",{});\n const links=await bridgeCommand(localBridge,"browser/links",{});\n const bundle=buildResearchBundle({query:q,title:data.title||opened.title,url:data.url||opened.url,text:data.text,links:links.links||[]});\n result.textContent=formatResearchResult(bundle);\n const answer="Navegador local conectado.\\n"+formatResearchResult(bundle);\n addMessage("assistant",answer);speak("Página analizada.");return;\n}\nif(intent.type==="tool"&&intent.tool){const data=intent.tool==="github.read"?await invokeGitHub(q):await invokeTool(intent.tool,intent.tool==="astra.search_supplier"?{q:normalizeSupplierQuery(q),limit:10}:{q,limit:10});const output=JSON.stringify(data,null,2);result.textContent=output;let reply;if(intent.tool==="github.read"&&data?.ok&&data?.content)reply="Leí "+(data.path||"el archivo")+" del repositorio. El contenido quedó visible en el panel de resultados.";else reply=data?.count?"Encontré "+data.count+" resultado"+(data.count===1?"":"s")+".":"No encontré resultados.";addMessage("assistant",reply);speak(reply);return}
+if(intent.type==="tool"&&intent.tool==="local.browser"){
+ const match=q.match(/https?:\/\/[^\s]+/i);
+ if(!localBridge)throw new Error("LOCAL_BRIDGE_OFFLINE: instala/inicia Emma Local Bridge en este equipo.");
+ if(!match)throw new Error("LOCAL_BROWSER_URL_REQUIRED: indica una URL http(s).");
+ const opened=await bridgeCommand(localBridge,"browser/open",{url:match[0]});
+ const data=await bridgeCommand(localBridge,"browser/analyze",{});
+ result.textContent=JSON.stringify(data,null,2);
+ const answer="Navegador local conectado.\n"+(data.title||opened.title||"Página sin título")+"\n"+(data.url||opened.url);
+ addMessage("assistant",answer);speak(answer);return;
+}
+if(intent.type==="tool"&&intent.tool){const data=intent.tool==="github.read"?await invokeGitHub(q):await invokeTool(intent.tool,intent.tool==="astra.search_supplier"?{q:normalizeSupplierQuery(q),limit:10}:{q,limit:10});const output=JSON.stringify(data,null,2);result.textContent=output;let reply;if(intent.tool==="github.read"&&data?.ok&&data?.content)reply="Leí "+(data.path||"el archivo")+" del repositorio. El contenido quedó visible en el panel de resultados.";else reply=data?.count?"Encontré "+data.count+" resultado"+(data.count===1?"":"s")+".":"No encontré resultados.";addMessage("assistant",reply);speak(reply);return}
 const context=await getGlobalContext(q);const answer=await invokeChat(q,{source_context:context?.data||context,execution_route:runtime.route,execution_budget:runtime.budget});addMessage("assistant",answer);result.textContent=answer;speak(answer)
 }catch(e){const msg=e?.message||String(e);result.textContent="Error: "+msg;addMessage("assistant","Error real: "+msg);speak("Encontré un error. Revisa el panel de resultados.")}finally{if(orb.getState()==="thinking")orb.setState("idle")}}
 logout.onclick=()=>supabase.auth.signOut();$("#execute").onclick=()=>{primeAudio();execute(command.value)};$("#voice").onclick=()=>{primeAudio();voice?.start()};command.addEventListener("keydown",e=>{if(e.key==="Enter")execute(command.value)});
