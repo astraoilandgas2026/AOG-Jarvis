@@ -30,7 +30,7 @@ async function ensureBrowser(){
 const server=http.createServer(async(req,res)=>{
   if(req.method==="OPTIONS")return json(res,204,{},req);
   try{
-    if(req.url==="/health")return json(res,200,{ok:true,name:"Emma Local Bridge",version:"1.1",capabilities:["browser","web-analysis","screenshot","persistent-session"],token_required:true,pairing_token:TOKEN},req);
+    if(req.url==="/health")return json(res,200,{ok:true,name:"Emma Local Bridge",version:"1.2",capabilities:["browser","web-analysis","links","screenshot","persistent-session"],token_required:true,pairing_token:TOKEN},req);
     if(!auth(req))return json(res,401,{ok:false,error:"AUTH_REQUIRED"},req);
     if(req.method!=="POST"||!req.url.startsWith("/v1/"))return json(res,404,{ok:false,error:"NOT_FOUND"},req);
     const command=req.url.slice(4),input=await body(req),p=await ensureBrowser();
@@ -49,6 +49,10 @@ const server=http.createServer(async(req,res)=>{
     if(command==="browser/state"){
       const title=await p.title();const text=(await p.locator("body").innerText({timeout:10000})).slice(0,30000);
       return json(res,200,{ok:true,url:p.url(),title,text},req);
+    }
+    if(command==="browser/links"){
+      const links=await p.locator("a").evaluateAll(nodes=>nodes.slice(0,200).map(a=>({text:(a.innerText||a.textContent||"").trim().slice(0,240),url:a.href||"",title:a.getAttribute("title")||"",aria:a.getAttribute("aria-label")||""})).filter(x=>x.url));
+      return json(res,200,{ok:true,url:p.url(),links},req);
     }
     if(command==="browser/tabs"){
       const tabs=context.pages().map((tab,i)=>({index:i,url:tab.url(),title:""}));
