@@ -15,6 +15,7 @@ import { analyzeProcurement } from "./modules/procurement-intelligence.js";
 import { buildExecutionPlan } from "./core/execution-plan.js";
 import { planExecution, executionResult } from "./core/execution-orchestrator.js";
 import { automationPlan } from "./core/automation-engine.js";
+import { buildSearchUrl, buildResearchBundle, formatResearchResult } from "./modules/operational-agent.js";
 import { rankTools, PERFORMANCE_RULE } from "./core/performance-engine.js";
 import { saveSnapshot, loadSnapshot, isOffline } from "./core/offline-core.js";
 const supabase=createClient(CONFIG.supabaseUrl,CONFIG.supabasePublishableKey);
@@ -160,6 +161,12 @@ if(intent.type==="task_list"){
    const rows=data.data.map((t,i)=>{const due=t.due_at?" — "+new Date(t.due_at).toLocaleString("es-CL"):"";return (i+1)+". "+t.title+due;});
    answer="Tienes "+data.count+" pendientes.\\n"+rows.join("\\n");
  }
+ addMessage("assistant",answer);speak(answer);return;
+}
+if(intent.tool==="emma.status"){
+ const status={version:"operational-layer-1",router:runtime.route,adapters:listAdapters(),local_bridge:localBridge?{connected:true,url:localBridge.url,health:localBridge.health}:null,tools:Object.keys(TOOL_REGISTRY).length,capabilities:{astra:true,memory:true,tasks:true,automation:true,local_browser:Boolean(localBridge),research:Boolean(localBridge),email:true,calendar:true}};
+ result.textContent=JSON.stringify(status,null,2);
+ const answer=localBridge?"Emma operativa. Browser local conectado; Astra, memoria, tareas, automatizaciones y evidencia disponibles.":"Emma operativa. Astra, memoria, tareas y automatizaciones disponibles; Browser local offline.";
  addMessage("assistant",answer);speak(answer);return;
 }
 if(intent.tool==="execution.plan"){const kind=/correo|email|gmail/.test(q)?"email":/calendario|reunión|reunion|agenda/.test(q)?"calendar":/github|código|codigo|repo/.test(q)?"project":/documento|coa|sds|iscc|ficha/.test(q)?"documents":"supplier";const data=buildExecutionPlan(kind,executionRegistry());result.textContent=JSON.stringify(data,null,2);addMessage("assistant",`Plan ${kind} listo: ${data.steps.length} pasos, priorizando herramientas existentes y cero LLM innecesario.`);return}
