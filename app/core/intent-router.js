@@ -1,6 +1,7 @@
 export function classifyIntent(text=""){
  const q=text.trim().toLowerCase();
  if(!q)return{type:"empty",module:"conversation"};
+ if(/\b(?:backup|respaldo)\b/.test(q))return{type:"operational",module:"local",tool:"local.backup"};
  if(/(?:recuérdame|recuerdame|recordatorio|alarma|pon una alarma|anota como pendiente|apunta como pendiente|agrega una tarea|añade una tarea)/.test(q))return{type:"task_create",module:"automation"};
  if(/(?:mis tareas|tareas pendientes|mis pendientes|qué tengo pendiente|que tengo pendiente|recordatorios pendientes)/.test(q))return{type:"task_list",module:"automation"};
  if(/(?:mis automatizaciones|automatizaciones activas|recurrencias activas|qué automatizaciones tengo|que automatizaciones tengo)/.test(q))return{type:"tool",module:"automation",tool:"automation.list"};
