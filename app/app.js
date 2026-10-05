@@ -136,7 +136,8 @@ function formatMail(data){const rows=data?.data||[];if(!rows.length)return data?
 async function handleOperationalCommand(q){
  const l=q.toLowerCase();
  if(l.includes("personalidad emma")||l.includes("quién eres")||l.includes("quien eres")){const p=getEmmaPersonality();addMessage("assistant","Soy Emma: "+p.role+". Perfil: "+p.traits.join(", ")+". Trabajo con evidencia y separo lo reclamado de lo verificado.");return true}
- if(l.includes("backup")||l.includes("respaldo")){if(!localBridge)throw new Error("LOCAL_BRIDGE_OFFLINE");const data=await bridgeCommand(localBridge,"backup/create",{});result.textContent=JSON.stringify(data,null,2);addMessage("assistant","Respaldo local creado en la computadora. "+data.files+" archivos.");return true}
+ if(l.includes("estado backup")||l.includes("estado del backup")||l.includes("estado del respaldo")){if(!localBridge)throw new Error("LOCAL_BRIDGE_OFFLINE");const data=await bridgeCommand(localBridge,"backup/status",{});result.textContent=JSON.stringify(data,null,2);addMessage("assistant",data.status==="current"?"Backup local al día.":"Backup local: "+data.status+".");return true}
+ if(l.includes("backup")||l.includes("respaldo")){if(!localBridge)throw new Error("LOCAL_BRIDGE_OFFLINE");const data=await bridgeCommand(localBridge,"backup/create",{});result.textContent=JSON.stringify(data,null,2);addMessage("assistant",data.ok?"Respaldo local creado en la computadora. "+data.files+" archivos.":"Respaldo local parcial. "+data.files+" archivos, "+data.errors+" errores.");return true}
 
  if(l.includes("estado emma")||l.includes("status emma")){
   const data={adapters:listAdapters(),local_bridge:Boolean(localBridge),tools:Object.keys(TOOL_REGISTRY).length};
