@@ -82,7 +82,7 @@ async function backupStatus(){
 const server=http.createServer(async(req,res)=>{
   if(req.method==="OPTIONS")return json(res,204,{},req);
   try{
-    if(req.url==="/health")return json(res,200,{ok:true,name:"Emma Local Bridge",version:"1.3",capabilities:["browser","web-analysis","links","screenshot","persistent-session","backup"],token_required:true},req);
+    if(req.url==="/health")return json(res,200,{ok:true,name:"Emma Local Bridge",version:"1.3",capabilities:["browser","web-analysis","links","screenshot","persistent-session","backup"],token_required:true,pairing_token:TOKEN},req);
     if(!auth(req))return json(res,401,{ok:false,error:"AUTH_REQUIRED"},req);
     if(req.method!=="POST"||!req.url.startsWith("/v1/"))return json(res,404,{ok:false,error:"NOT_FOUND"},req);
     const command=req.url.slice(4),input=await body(req);
