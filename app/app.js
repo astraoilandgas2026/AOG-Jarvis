@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.105.0";
 import { CONFIG } from "./config.js";
 import { createOrb } from "./modules/orb.js";
 import { chooseOrb } from "./modules/orb-personality.js";
+import { getEmmaPersonality } from "./modules/emma-personality.js";
 import { discoverLocalBridge, bridgeCommand } from "./modules/local-bridge.js";
 import { registerAdapter, listAdapters } from "./modules/adapter-registry.js";
 import { autonomyPolicy } from "./modules/evidence-policy.js";
@@ -24,7 +25,8 @@ const logout=$("#logout"),install=$("#install"),result=$("#result")||document.cr
 let voice=null;
 let audioContext=null;
 function primeAudio(){try{if(!audioContext)audioContext=new (window.AudioContext||window.webkitAudioContext)();if(audioContext.state==="suspended")audioContext.resume().catch(()=>{});return true}catch{return false}}
-const orbChoice=chooseOrb("strategic analytical procurement oracle");
+const emmaPersonality=getEmmaPersonality();
+const orbChoice=chooseOrb(emmaPersonality.visual.orb+" strategic analytical procurement oracle");
 const orb=createOrb({root:$("#orb"),status:$("#orb-status"),onActivate:()=>voice?.start()});
 orb.setAppearance?.(orbChoice);
 document.documentElement.dataset.emmaOrb=orbChoice.id;
