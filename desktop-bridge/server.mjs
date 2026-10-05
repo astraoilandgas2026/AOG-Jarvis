@@ -16,7 +16,7 @@ const BACKUP_FILES=[
   "app/modules/local-bridge.js","app/modules/adapter-registry.js","app/modules/evidence-policy.js",
   "app/core/tool-registry.js","app/core/intent-router.js","app/core/emma-runtime.js",
   "app/core/automation-engine.js","app/core/execution-plan.js","app/core/execution-orchestrator.js",
-  "app/core/performance-engine.js","app/core/offline-core.js","README.md","package.json"
+  "app/core/performance-engine.js","app/core/offline-core.js","README.md"
 ];
 const GITHUB_RAW_BASE="https://raw.githubusercontent.com/astraoilandgas2026/AOG-Jarvis/main/";
 
@@ -36,6 +36,11 @@ async function ensureBrowser(){
   if(!context)context=await chromium.launchPersistentContext(PROFILE_DIR,{headless:false,viewport:{width:1440,height:900},acceptDownloads:true});
   if(!page||page.isClosed())page=context.pages()[0]||await context.newPage();
   return page;
+}
+function requireIndex(input){
+  const index=Number(input?.index);
+  if(!Number.isInteger(index)||index<0||index>=context.pages().length)throw new Error("BROWSER_TAB_INVALID");
+  return context.pages()[index];
 }
 
 async function createBackup(){
@@ -82,27 +87,69 @@ async function backupStatus(){
 const server=http.createServer(async(req,res)=>{
   if(req.method==="OPTIONS")return json(res,204,{},req);
   try{
-    if(req.url==="/health")return json(res,200,{ok:true,name:"Emma Local Bridge",version:"1.3",capabilities:["browser","web-analysis","links","screenshot","persistent-session","backup"],token_required:true,pairing_token:TOKEN},req);
+    if(req.url==="/health")return json(res,200,{ok:true,name:"Emma Local Bridge",version:"1.4",capabilities:["browser","web-analysis","links","screenshot","persistent-session","multi-tab","wait","backup"],token_required:true,pairing_token:TOKEN},req);
     if(!auth(req))return json(res,401,{ok:false,error:"AUTH_REQUIRED"},req);
     if(req.method!=="POST"||!req.url.startsWith("/v1/"))return json(res,404,{ok:false,error:"NOT_FOUND"},req);
     const command=req.url.slice(4),input=await body(req);
     if(command==="backup/create")return json(res,200,await createBackup(),req);
     if(command==="backup/status")return json(res,200,await backupStatus(),req);
+
     const p=await ensureBrowser();
+
     if(command==="browser/open"){
-      const url=new URL(input.url);if(!/^https?:$/.test(url.protocol))throw new Error("Only HTTP(S) URLs are allowed");
-      await p.goto(url.toString(),{waitUntil:"domcontentloaded",timeout:30000});return json(res,200,{ok:true,url:p.url(),title:await p.title()},req);
+      const url=new URL(input.url);
+      if(!/^https?:$/.test(url.protocol))throw new Error("Only HTTP(S) URLs are allowed");
+      await p.goto(url.toString(),{waitUntil:"domcontentloaded",timeout:30000});
+      return json(res,200,{ok:true,url:p.url(),title:await p.title()},req);
+    }
+    if(command==="browser/new-tab"){
+      page=await context.newPage();
+      if(input.url){
+        const url=new URL(input.url);
+        if(!/^https?:$/.test(url.protocol))throw new Error("Only HTTP(S) URLs are allowed");
+        await page.goto(url.toString(),{waitUntil:"domcontentloaded",timeout:30000});
+      }
+      return json(res,200,{ok:true,index:context.pages().indexOf(page),url:page.url(),title:await page.title()},req);
+    }
+    if(command==="browser/select-tab"){
+      page=requireIndex(input);
+      return json(res,200,{ok:true,index:Number(input.index),url:page.url(),title:await page.title()},req);
+    }
+    if(command==="browser/wait"){
+      const timeout=Math.min(Math.max(Number(input.timeout)||10000,250),30000);
+      if(input.selector){
+        await p.locator(String(input.selector)).first().waitFor({state:input.state==="hidden"?"hidden":"visible",timeout});
+      }else if(input.text){
+        await p.getByText(String(input.text),{exact:false}).first().waitFor({state:"visible",timeout});
+      }else{
+        await p.waitForTimeout(Math.min(timeout,5000));
+      }
+      return json(res,200,{ok:true,url:p.url()},req);
+    }
+    if(command==="browser/scroll"){
+      const amount=Number(input.amount)||600;
+      await p.mouse.wheel(0,amount);
+      return json(res,200,{ok:true,url:p.url()},req);
     }
     if(command==="browser/analyze"){
-      const text=await p.locator("body").innerText({timeout:10000});return json(res,200,{ok:true,url:p.url(),title:await p.title(),text:text.slice(0,50000)},req);
+      const text=await p.locator("body").innerText({timeout:10000});
+      return json(res,200,{ok:true,url:p.url(),title:await p.title(),text:text.slice(0,50000)},req);
     }
     if(command==="browser/screenshot"){
-      const data=(await p.screenshot({type:"png",fullPage:false})).toString("base64");return json(res,200,{ok:true,mime:"image/png",data},req);
+      const data=(await p.screenshot({type:"png",fullPage:false})).toString("base64");
+      return json(res,200,{ok:true,mime:"image/png",data},req);
     }
-    if(command==="browser/click"){await p.locator(input.selector).first().click({timeout:10000});return json(res,200,{ok:true,url:p.url()},req)}
-    if(command==="browser/fill"){await p.locator(input.selector).first().fill(String(input.value??""),{timeout:10000});return json(res,200,{ok:true},req)}
+    if(command==="browser/click"){
+      await p.locator(input.selector).first().click({timeout:10000});
+      return json(res,200,{ok:true,url:p.url()},req);
+    }
+    if(command==="browser/fill"){
+      await p.locator(input.selector).first().fill(String(input.value??""),{timeout:10000});
+      return json(res,200,{ok:true},req);
+    }
     if(command==="browser/state"){
-      const title=await p.title();const text=(await p.locator("body").innerText({timeout:10000})).slice(0,30000);
+      const title=await p.title();
+      const text=(await p.locator("body").innerText({timeout:10000})).slice(0,30000);
       return json(res,200,{ok:true,url:p.url(),title,text},req);
     }
     if(command==="browser/links"){
