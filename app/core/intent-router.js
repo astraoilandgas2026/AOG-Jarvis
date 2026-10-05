@@ -3,8 +3,10 @@ export function classifyIntent(text=""){
  if(!q)return{type:"empty",module:"conversation"};
  if(/(?:recuérdame|recuerdame|recordatorio|alarma|pon una alarma|anota como pendiente|apunta como pendiente|agrega una tarea|añade una tarea)/.test(q))return{type:"task_create",module:"automation"};
  if(/(?:mis tareas|tareas pendientes|mis pendientes|qué tengo pendiente|que tengo pendiente|recordatorios pendientes)/.test(q))return{type:"task_list",module:"automation"};
+ if(/(?:mis automatizaciones|automatizaciones activas|recurrencias activas|qué automatizaciones tengo|que automatizaciones tengo)/.test(q))return{type:"tool",module:"automation",tool:"automation.list"};
  if(/(?:actualiza|cambia|modifica).*(?:memoria|recuerdo)|(?:memoria|recuerdo).*(?:actualiza|cambia|modifica)/.test(q))return{type:"memory_update",module:"memory"};
  if(/(?:olvida|borra|desactiva).*(?:memoria|recuerdo)|(?:memoria|recuerdo).*(?:olvida|borra|desactiva)/.test(q))return{type:"memory_deactivate",module:"memory"};
+ if(/(?:qué recuerdas|que recuerdas|qué sabes de mí|que sabes de mi|busca en tu memoria|lee mi memoria)/.test(q))return{type:"memory_read",module:"memory"};
  if(/(?:recuerda|acuérdate|acuerdate|anota|apunta|guarda|memoriza|no olvides)/.test(q))return{type:"memory_write",module:"memory"};
  if(/planifica.*ejecución|plan de ejecución|cómo ejecutar|como ejecutar/.test(q))return{type:"tool",module:"execution",tool:"execution.plan"};
  if(/orquesta|orquestador|ejecuta.*pasos|coordina.*herramientas/.test(q))return{type:"tool",module:"execution",tool:"execution.orchestrator"};
@@ -15,6 +17,7 @@ export function classifyIntent(text=""){
  if(/dd|due diligence|diligencia|riesgo/.test(q))return{type:"tool",module:"astra",tool:"astra.dd"};
  if(/oferta|precio|commercial|incoterm|fob|cif|cfr/.test(q))return{type:"tool",module:"astra",tool:"astra.offers"};
  if(/^(?:emma[,:]?\s*)?(?:crea|genera|hazme|prepara)\b.*\b(documento|documentos|word|docx|pdf|powerpoint|pptx|company profile)\b/i.test(text))return{type:"action",module:"documents",task:"generate_document"};
+ if(/(?:estado|status|salud|health).*(?:emma|jarvis)|(?:emma|jarvis).*(?:estado|status|salud|health)/.test(q))return{type:"tool",module:"emma",tool:"emma.status"};
  if(/(?:calendario|calendar|agenda|evento|reunión|reunion|cita)/.test(q))return{type:"tool",module:"calendar",tool:q.includes("crea")||q.includes("agrega")||q.includes("programa")?"calendar.create":"calendar.read"};
  if(/gmail/.test(q)&&/(?:envía|envia|manda|mandar)/.test(q))return{type:"action",module:"gmail",tool:"gmail.send",requiresConfirmation:true};
  if(/gmail/.test(q)||/(?:correo|email)/.test(q)&&/(?:google|gmail)/.test(q))return{type:"tool",module:"gmail",tool:"gmail.read"};
@@ -28,7 +31,7 @@ export function classifyIntent(text=""){
  if(/qué tenemos|que tenemos|qué sabemos|que sabemos|todo sobre|dame todo|historial completo|estado completo/.test(q)&&/proveedor|olam|renovar|óleos|oleos|supplier/.test(q))return{type:"tool",module:"astra",tool:"astra.intelligence"};
  if(/busca|buscar|encuentra|proveedor|olam|renovar|óleos|oleos|cnpj/.test(q))return{type:"tool",module:"astra",tool:"astra.search_supplier"};
  if(/(?:abre|abrir|navega|navegar|visita|revisa|revisar|analiza|analizar).*(?:https?:\/\/|web|página|pagina|sitio|website)/.test(q)||/https?:\/\//.test(q)&&/(?:abre|revisa|analiza|navega|visita)/.test(q))return{type:"tool",module:"local",tool:"local.browser"};
- if(/(?:abre|abrir|navega|navegar|visita|revisa|revisar|analiza|analizar).*(?:https?:\/\/|web|página|pagina|sitio|website)/.test(q)||/https?:\/\//.test(q)&&/(?:abre|revisa|analiza|navega|visita)/.test(q))return{type:"tool",module:"local",tool:"local.browser"};
+ 
  if(/resume|resumen|resúmeme|analiza|explica/.test(q))return{type:"conversation",module:"conversation",task:"summarize"};
  if(/github|repositorio|repo|archivo del proyecto|código del proyecto/.test(q))return{type:"tool",module:"github",tool:"github.read"};
  if(/investiga|internet|web|fuentes/.test(q))return{type:"research",module:"research"};
