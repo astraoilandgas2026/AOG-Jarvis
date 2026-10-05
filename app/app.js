@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.105.0";
 import { CONFIG } from "./config.js";
 import { createOrb } from "./modules/orb.js";
 import { chooseOrb } from "./modules/orb-personality.js";
+import { getEmmaPersonality } from "./modules/emma-personality.js";
 import { discoverLocalBridge, bridgeCommand } from "./modules/local-bridge.js";
 import { registerAdapter, listAdapters } from "./modules/adapter-registry.js";
 import { autonomyPolicy } from "./modules/evidence-policy.js";
@@ -24,7 +25,8 @@ const logout=$("#logout"),install=$("#install"),result=$("#result")||document.cr
 let voice=null;
 let audioContext=null;
 function primeAudio(){try{if(!audioContext)audioContext=new (window.AudioContext||window.webkitAudioContext)();if(audioContext.state==="suspended")audioContext.resume().catch(()=>{});return true}catch{return false}}
-const orbChoice=chooseOrb("strategic analytical procurement oracle");
+const emmaPersonality=getEmmaPersonality();
+const orbChoice=chooseOrb(emmaPersonality.visual.orb+" strategic analytical procurement oracle");
 const orb=createOrb({root:$("#orb"),status:$("#orb-status"),onActivate:()=>voice?.start()});
 orb.setAppearance?.(orbChoice);
 document.documentElement.dataset.emmaOrb=orbChoice.id;
@@ -132,6 +134,10 @@ async function invokeMail(action,body={}){const tool=getTool(action==="send"?"ma
 function parseSendEmail(q){const match=q.match(/(?:envía|envia|manda|mandar)\s+(?:un\s+)?(?:correo|email|mail)\s+(?:a|para)\s+([^\s]+)\s+(?:con\s+)?(?:asunto|subject)\s*[:=-]\s*(.+?)\s+(?:cuerpo|body|mensaje)\s*[:=-]\s*([\s\S]+)$/i);if(!match)return null;return{to:[match[1]],subject:match[2].trim(),text:match[3].trim()}}
 function formatMail(data){const rows=data?.data||[];if(!rows.length)return data?.mailbox?"No hay correos que coincidan en "+data.mailbox+".":"No encontré correos.";return rows.slice(0,10).map((m,i)=>`${i+1}. ${m.subject||"(sin asunto)"} — ${m.from?.address||"remitente desconocido"} — ${m.date?new Date(m.date).toLocaleString("es-CL"): ""} [UID ${m.uid}]`).join("\n")}
 async function handleOperationalCommand(q){
+ const l=q.toLowerCase();
+ if(l.includes("personalidad emma")||l.includes("quién eres")||l.includes("quien eres")){const p=getEmmaPersonality();addMessage("assistant","Soy Emma: "+p.role+". Perfil: "+p.traits.join(", ")+". Trabajo con evidencia y separo lo reclamado de lo verificado.");return true}
+ if(l.includes("backup")||l.includes("respaldo")){if(!localBridge)throw new Error("LOCAL_BRIDGE_OFFLINE");const data=await bridgeCommand(localBridge,"backup/create",{});result.textContent=JSON.stringify(data,null,2);addMessage("assistant","Respaldo local creado en la computadora. "+data.files+" archivos.");return true}
+
  const l=q.toLowerCase();
  if(l.includes("estado emma")||l.includes("status emma")){
   const data={adapters:listAdapters(),local_bridge:Boolean(localBridge),tools:Object.keys(TOOL_REGISTRY).length};

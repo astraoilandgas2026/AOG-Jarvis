@@ -54,7 +54,7 @@ const server=http.createServer(async(req,res)=>{
       const links=await p.locator("a").evaluateAll(nodes=>nodes.slice(0,200).map(a=>({text:(a.innerText||a.textContent||"").trim().slice(0,240),url:a.href||"",title:a.getAttribute("title")||"",aria:a.getAttribute("aria-label")||""})).filter(x=>x.url));
       return json(res,200,{ok:true,url:p.url(),links},req);
     }
-    if(command==="browser/tabs"){
+    if(command==="backup/create"){const backup=await createBackup();return json(res,200,backup,req)}\n    if(command==="backup/status"){const fs=await import("node:fs/promises");const entries=await fs.readdir(BACKUP_DIR,{withFileTypes:true}).catch(()=>[]);return json(res,200,{ok:true,backups:entries.filter(x=>x.isDirectory()).map(x=>x.name).sort().reverse().slice(0,7)},req)}\n    if(command==="browser/tabs"){
       const tabs=context.pages().map((tab,i)=>({index:i,url:tab.url(),title:""}));
       for(let i=0;i<tabs.length;i++)tabs[i].title=await context.pages()[i].title().catch(()=> "");
       return json(res,200,{ok:true,tabs},req);
@@ -62,4 +62,4 @@ const server=http.createServer(async(req,res)=>{
     return json(res,404,{ok:false,error:"UNKNOWN_COMMAND"},req);
   }catch(error){return json(res,500,{ok:false,error:String(error?.message||error)},req)}
 });
-server.listen(PORT,"127.0.0.1",()=>console.log("Emma Local Bridge listening on http://127.0.0.1:"+PORT));
+server.listen(PORT,"127.0.0.1",()=>{console.log("Emma Local Bridge listening on http://127.0.0.1:"+PORT);createBackup().catch(()=>{});setInterval(()=>createBackup().catch(()=>{}),24*60*60*1000)});
