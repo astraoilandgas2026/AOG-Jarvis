@@ -31,7 +31,7 @@ const orb=createOrb({root:$("#orb"),status:$("#orb-status"),onActivate:()=>voice
 orb.setAppearance?.(orbChoice);
 document.documentElement.dataset.emmaOrb=orbChoice.id;
 let localBridge=null;
-async function refreshLocalBridge(){try{const b=await discoverLocalBridge();localBridge=b;registerAdapter({id:"local-computer",name:"Emma Local Computer",kind:"desktop",status:b?"connected":"offline",capabilities:["browser","files","apps","screen"],connect:async()=>b});return b}catch{return null}}
+async function refreshLocalBridge(){try{const b=await discoverLocalBridge();localBridge=b;orb.setConnection?.(Boolean(b));registerAdapter({id:"local-computer",name:"Emma Local Computer",kind:"desktop",status:b?"connected":"offline",capabilities:["browser","files","apps","screen"],connect:async()=>b});return b}catch{return null}}
 refreshLocalBridge();
 setInterval(()=>{if(!localBridge)refreshLocalBridge()},5000);
 voice=createVoice({orb,onTranscript:t=>{const normalized=normalizeVoiceText(t);command.value=normalized;execute(normalized)},onError:e=>setStatus(e)});
