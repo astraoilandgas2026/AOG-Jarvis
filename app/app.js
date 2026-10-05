@@ -18,6 +18,7 @@ import { planExecution, executionResult } from "./core/execution-orchestrator.js
 import { automationPlan } from "./core/automation-engine.js";
 import { rankTools, PERFORMANCE_RULE } from "./core/performance-engine.js";
 import { saveSnapshot, loadSnapshot, isOffline } from "./core/offline-core.js";
+import { runResearchAgent } from "./modules/research-agent.js?v=1";
 const supabase=createClient(CONFIG.supabaseUrl,CONFIG.supabasePublishableKey);
 const $=s=>document.querySelector(s);
 const command=$("#command"),messages=$("#messages"),chat=$("#chat"),home=$("#home");
@@ -207,26 +208,11 @@ if(intent.type==="tool"&&intent.tool&&intent.tool.startsWith("astra.")){const bo
 if(intent.type==="research"){
  if(!localBridge)throw new Error("LOCAL_BRIDGE_OFFLINE: inicia Emma Local Bridge para investigar en la web.");
  const researchQuery=q.replace(/^(?:emma[,\\s]*)?(?:investiga|investigar|busca|buscar|averigua|verifica|comprueba)\\s*/i,"").trim()||q;
- const searchUrl="https://www.google.com/search?q="+encodeURIComponent(researchQuery);
- const search=await bridgeCommand(localBridge,"browser/open",{url:searchUrl});
- const searchData=await bridgeCommand(localBridge,"browser/analyze",{});
- const linkData=await bridgeCommand(localBridge,"browser/links",{});
- const candidates=(linkData.links||[]).filter(x=>/^https?:/i.test(x.url)&&!/(google\\.|youtube\\.com|facebook\\.com|instagram\\.com|x\\.com)/i.test(x.url)).slice(0,5);
- const sources=[];
- for(const candidate of candidates){
-  try{
-   const opened=await bridgeCommand(localBridge,"browser/open",{url:candidate.url});
-   const page=await bridgeCommand(localBridge,"browser/analyze",{});
-   sources.push({title:page.title||opened.title||candidate.title||candidate.text||"",url:page.url||opened.url||candidate.url,text:(page.text||"").slice(0,9000)});
-  }catch(error){sources.push({title:candidate.title||candidate.text||"",url:candidate.url,text:"SOURCE_ERROR: "+(error?.message||"unknown")})}
- }
- const bundle={query:researchQuery,search_title:searchData.title||search.title,search_url:searchData.url||search.url,evidence_level:"DOCUMENTED",retrieved_at:new Date().toISOString(),sources:sources.slice(0,5)};
- try{await invokeTool("emma.research.save",{q:JSON.stringify(bundle).slice(0,50000),source_type:"web_research",source_ref:bundle.search_url,source_url:bundle.search_url,title:"Emma Research · "+researchQuery.slice(0,180),content_excerpt:sources.map((s,i)=>(i+1)+". "+s.title+"\\n"+s.text).join("\\n\\n").slice(0,30000),evidence_level:"documented",retrieved_at:bundle.retrieved_at,metadata:{query:researchQuery,sources:sources.map(s=>({title:s.title,url:s.url}))}})}catch(saveError){console.warn("Research persistence:",saveError)}
+ const bundle=await runResearchAgent({bridge:localBridge,query:researchQuery,invokeTool,limit:8});
  result.textContent=JSON.stringify(bundle,null,2);
- const answer="Investigación web ejecutada. "+sources.length+" fuentes analizadas. Estado: DOCUMENTED.";
+ const answer="Investigación web ejecutada. "+bundle.sources.length+" fuentes analizadas. Estado: "+bundle.evidence_level+".";
  addMessage("assistant",answer);speak(answer);return;
-}
-if(intent.type==="tool"&&intent.tool==="local.browser"){
+}if(intent.type==="tool"&&intent.tool==="local.browser"){
  const match=q.match(/https?:\/\/[^\s]+/i);
  if(!localBridge)throw new Error("LOCAL_BRIDGE_OFFLINE: instala/inicia Emma Local Bridge en este equipo.");
  if(!match)throw new Error("LOCAL_BROWSER_URL_REQUIRED: indica una URL http(s).");
