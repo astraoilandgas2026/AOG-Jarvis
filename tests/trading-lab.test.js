@@ -8,7 +8,7 @@ assert.equal(classifyTradingIntent("activa paper trading").tool,"trading.paper")
 assert.equal(classifyTradingIntent("investiga Jesse y Darwinia").tool,"trading.research");
 const denied=riskGate({quantity:1,price:1,risk_pct:2},{startingCapital:20,maxRiskPerTradePct:1,maxExposurePct:5,maxDailyLossPct:2,maxOrderNotional:100,killSwitch:false},{equity:20,daily_loss_pct:0});
 assert.equal(denied.allowed,false);assert.ok(denied.reasons.includes("RISK_PER_TRADE_LIMIT"));
-const candles=Array.from({length:80},(_,i)=>({openTime:Date.now()-i*60000,closeTime:Date.now()-i*60000+59000,close:100+i*0.5}));
+const base=Date.now()-79*60000; const candles=Array.from({length:80},(_,i)=>({openTime:base+i*60000,closeTime:base+i*60000+59000,close:100+i*0.5}));
 const validation=validateCandles(candles);assert.equal(validation.valid,true);
 const scan=scanOpportunity(candles,{symbol:"BTCUSDT",interval:"1m",maxAgeMs:3600000});assert.equal(scan.status,"ok");assert.ok(scan.score>0);
 const status=tradingStatus({TRADING_MODE:"paper",LIVE_TRADING_ENABLED:"false"});assert.equal(status.mode,"paper");assert.equal(status.live_enabled,false);assert.equal(status.leverage,1);
