@@ -25,8 +25,16 @@ jobs:
       - name: Run deterministic Emma routing tests
         run: deno test --no-config core/smart-router.test.js app/core/emma-runtime.test.js
 
+      - name: Run trading lab tests
+        run: node tests/trading-lab.test.js
+
       - name: Check browser runtime syntax
         run: node --check app/app.js
+          node --check app/core/intent-router.js
+          node --check app/core/trading-intent.js
+          node --check app/modules/trading-lab.js
+          node --check app/modules/trading-adapters.js
+          node --check desktop-bridge/server.mjs
 
       - name: Type-check critical Emma functions
         run: |
