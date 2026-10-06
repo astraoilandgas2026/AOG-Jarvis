@@ -5,7 +5,7 @@ const PROVIDERS=Object.freeze({
  anthropic:{id:"anthropic",label:"Anthropic",mode:"cloud",status:"planned",capabilities:["chat","reasoning","code","vision","document-analysis"]},
  local:{id:"local",label:"Local model",mode:"local",status:"planned",capabilities:["chat","reasoning","code","vision","image","audio","video","document-generation"]}
 });
-const FAILOVER_ORDER=["groq","gemini","openai","anthropic","local"];
+const FAILOVER_ORDER=["omniroute","groq","gemini","openai","anthropic","local"];
 export function getProviders(){return PROVIDERS}
 export function getFailoverOrder(){return FAILOVER_ORDER.slice()}
 export function providersForTask(task,{available=[]}={}){const pool=available.length?available:FAILOVER_ORDER;return pool.map(id=>PROVIDERS[id]).filter(Boolean).filter(provider=>provider.status==="active"&&provider.capabilities.includes(task))}
