@@ -49,7 +49,7 @@ export function validateCandles(candles=[],opts={}){
     clean.push({...c,close});
   }
   const last=clean.at(-1),age=last&&Number.isFinite(Number(last.closeTime))?Math.max(0,now-Number(last.closeTime)):null;
-  return {valid:clean.length>=60&&!last?false:clean.length>=60,dataStale:age!==null&&age>maxAge,count:clean.length,lastCloseTime:last?.closeTime??null,ageMs:age};
+  return {valid:clean.length>=60,dataStale:age!==null&&age>maxAge,count:clean.length,lastCloseTime:last?.closeTime??null,ageMs:age,candles:clean};
 }
 function ema(values,period){
   if(values.length<period)return null;const k=2/(period+1);let e=values.slice(0,period).reduce((a,b)=>a+b,0)/period;
@@ -58,7 +58,8 @@ function ema(values,period){
 export function scanOpportunity(candles=[],opts={}){
   const validation=validateCandles(candles,opts);if(!validation.valid)return {status:"insufficient_data",score:0,reason:"Need at least 60 valid candles",validation};
   if(validation.dataStale)return {status:"stale_data",score:0,reason:"Market data is stale",validation};
-  const closes=candles.map(c=>Number(c.close??c[4])).filter(Number.isFinite),fast=ema(closes,20),slow=ema(closes,50);
+  const usable=validation.candles||[];
+  const closes=usable.map(c=>Number(c.close??c[4])).filter(Number.isFinite),fast=ema(closes,20),slow=ema(closes,50);
   const last=closes.at(-1),prev=closes.at(-2),momentum=(last/prev-1)*100,trend=(fast/slow-1)*100;
   const volatility=Math.sqrt(closes.slice(-30).map((x,i,a)=>i?Math.pow(x/a[i-1]-1,2):0).reduce((a,b)=>a+b,0)/29)*100;
   const direction=trend>0&&momentum>0?"LONG":trend<0&&momentum<0?"SHORT":"NEUTRAL";

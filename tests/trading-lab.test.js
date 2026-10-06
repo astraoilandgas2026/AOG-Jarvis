@@ -10,6 +10,7 @@ const denied=riskGate({quantity:1,price:1,risk_pct:2},{startingCapital:20,maxRis
 assert.equal(denied.allowed,false);assert.ok(denied.reasons.includes("RISK_PER_TRADE_LIMIT"));
 const base=Date.now()-79*60000; const candles=Array.from({length:80},(_,i)=>({openTime:base+i*60000,closeTime:base+i*60000+59000,close:100+i*0.5}));
 const validation=validateCandles(candles);assert.equal(validation.valid,true);
+const dirty=[...candles]; dirty[10].close="not-a-number"; const dirtyScan=scanOpportunity(dirty,{symbol:"BTCUSDT",interval:"1m",maxAgeMs:3600000}); assert.equal(dirtyScan.status,"ok"); assert.ok(Number.isFinite(dirtyScan.last));
 const scan=scanOpportunity(candles,{symbol:"BTCUSDT",interval:"1m",maxAgeMs:3600000});assert.equal(scan.status,"ok");assert.ok(scan.score>0);
 const status=tradingStatus({TRADING_MODE:"paper",LIVE_TRADING_ENABLED:"false"});assert.equal(status.mode,"paper");assert.equal(status.live_enabled,false);assert.equal(status.leverage,1);
 const plan=buildResearchPlan(scan);assert.equal(plan.gates.length,9);assert.equal(plan.gates[4].name,"monte_carlo");
