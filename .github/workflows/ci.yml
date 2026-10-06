@@ -30,6 +30,7 @@ jobs:
           node tests/trading-lab.test.js
           node tests/binance-adapter.test.js
           node tests/freqtrade-adapter.test.js
+          node tests/freqtrade-adapter.test.js
 
       - name: Check browser runtime syntax
         run: |
@@ -39,6 +40,7 @@ jobs:
           node --check app/modules/trading-lab.js
           node --check app/modules/trading-adapters.js
           node --check app/modules/binance-adapter.js
+          node --check app/modules/freqtrade-adapter.js
           node --check app/modules/freqtrade-adapter.js
           node --check desktop-bridge/server.mjs
 
