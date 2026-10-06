@@ -1,4 +1,7 @@
 export const TOOL_REGISTRY=Object.freeze({
+ "ai.godmod3.status":{id:"ai.godmod3.status",label:"GODMOD3 Status",module:"ai",permission:"read",functionName:null,description:"Consulta la capacidad GODMOD3/G0DM0D3 integrada en EMMA."},
+ "ai.godmod3.evaluate":{id:"ai.godmod3.evaluate",label:"GODMOD3 Evaluation",module:"ai",permission:"read",functionName:null,description:"Construye evaluaciones multi-modelo comparativas mediante GODMOD3/ULTRAPLINIAN."},
+ "ai.godmod3.redteam":{id:"ai.godmod3.redteam",label:"GODMOD3 Red Team",module:"ai",permission:"read",functionName:null,description:"Usa la capacidad de red-team de GODMOD3 para someter respuestas/modelos a pruebas adversariales."},
  "ai.fcc.status":{id:"ai.fcc.status",label:"Free Claude Code Status",module:"ai",permission:"read",functionName:null,description:"Comprueba la integración conceptual de Free Claude Code y sus agentes/harnesses disponibles."},
  "ai.fcc.agents":{id:"ai.fcc.agents",label:"FCC Agent Harnesses",module:"ai",permission:"read",functionName:null,description:"Consulta los harnesses de agentes de Free Claude Code que EMMA puede utilizar como capacidad externa."},
  "ai.fcc.plan":{id:"ai.fcc.plan",label:"FCC Agent Plan",module:"ai",permission:"read",functionName:null,description:"Construye un plan de uso de FCC para tareas de coding, investigación o ejecución de agentes."},
