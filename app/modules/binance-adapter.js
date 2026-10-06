@@ -17,6 +17,13 @@ async function request(path,params={},env={},signed=false,method="GET"){
 export async function binanceStatus(env=process.env){const cred=credentials(env);const ping=await request("/api/v3/ping",{},env,false);const out={provider:"binance",environment:baseUrl(env)===PROD_BASE?"live":"testnet",credentials_configured:Boolean(cred.key&&cred.secret),ping};if(cred.key&&cred.secret)out.account=await request("/api/v3/account",{},env,true);return out;}
 export async function binanceExchangeInfo(symbol,env=process.env){return request("/api/v3/exchangeInfo",{symbol:String(symbol||"BTCUSDT").toUpperCase()},env,false);}
 export async function binanceBalance(env=process.env){return request("/api/v3/account",{},env,true);}
+export async function binancePaperOrder(order={},env=process.env){
+ const paperEnv={...env,BINANCE_ENV:"testnet",BINANCE_BASE_URL:DEFAULT_BASE};
+ const allowed={symbol:order.symbol,side:order.side,type:order.type||"MARKET",quantity:order.quantity,quoteOrderQty:order.quoteOrderQty,price:order.price,timeInForce:order.timeInForce,newClientOrderId:order.newClientOrderId};
+ for(const k of Object.keys(allowed))if(allowed[k]===undefined||allowed[k]===null||allowed[k]==="")delete allowed[k];
+ if(!allowed.symbol||!allowed.side||(!allowed.quantity&&!allowed.quoteOrderQty))return {ok:false,error:"BINANCE_ORDER_PARAMS_INVALID"};
+ return request("/api/v3/order/test",allowed,paperEnv,true,"POST");
+}
 export async function binanceOrder(order={},env=process.env){
  if(String(env.BINANCE_TRADING_ENABLED||"false")!=="true")return {ok:false,error:"BINANCE_TRADING_DISABLED"};
  if(String(env.TRADING_MODE||"paper")!=="live")return {ok:false,error:"TRADING_MODE_NOT_LIVE"};
