@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import {scoreOpportunity,capitalAllocation,moneyExperimentGate} from "../app/core/money-engine.js";
+import {buildTradingDebate,synthesizeTradingDecision} from "../app/core/trading-reasoning.js";
+import {createStrategyHypothesis,evaluateStrategy} from "../app/core/strategy-factory.js";
+assert.equal(scoreOpportunity({expected_return_pct:20,win_rate_pct:70,risk_pct:2,evidence_score:90,capital_required:5,effort_score:10}).decision,"PROMOTE");
+assert.equal(moneyExperimentGate({evidence_score:80,out_of_sample:true,walk_forward:true,costs_included:true,stress_test:true,paper_return_pct:3,risk_pass:true}).eligible,true);
+assert.equal(capitalAllocation([{expected_return_pct:10,win_rate_pct:60,evidence_score:80},{expected_return_pct:5,win_rate_pct:50,evidence_score:70}],20).reduce((s,x)=>s+x.allocated_capital,0),20);
+assert.equal(buildTradingDebate({symbol:"BTCUSDT",direction:"LONG"}).risk.fail_closed,true);
+assert.equal(synthesizeTradingDecision({}, {oos:true,walk_forward:true,monte_carlo:true,costs:true,risk:true,confidence:80}).decision,"PAPER_CANDIDATE");
+assert.equal(createStrategyHypothesis({symbol:"BTCUSDT"}).status,"PROPOSED");
+assert.equal(evaluateStrategy({backtest:true,out_of_sample:true,walk_forward:true,monte_carlo:true,costs:true,paper:true,risk:true,paper_return_pct:4,max_drawdown_pct:6}).status,"PROMOTE_TO_CANDIDATE");
+console.log("money-engine tests PASS");
