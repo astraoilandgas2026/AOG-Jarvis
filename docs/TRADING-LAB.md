@@ -20,3 +20,34 @@ Provider configuration:
 - OMNIROUTE_URL + OMNIROUTE_BACKTEST_URL + OMNIROUTE_PAPER_URL
 
 Jesse's current documentation exposes backtests, significance tests, Monte Carlo and optimization through its workflow/MCP; the adapter therefore refuses to pretend that a generic REST endpoint exists.
+
+
+## Binance connection
+
+Emma supports Binance Spot through the local bridge. The connection is fail-closed and defaults to Spot Testnet.
+
+Local environment variables (never commit them):
+- BINANCE_ENV=testnet
+- BINANCE_API_KEY=<testnet API key>
+- BINANCE_API_SECRET=<testnet API secret>
+- BINANCE_TRADING_ENABLED=false
+- TRADING_MODE=paper
+- LIVE_TRADING_ENABLED=false
+
+For production:
+- BINANCE_ENV=live
+- BINANCE_API_KEY=<dedicated production key>
+- BINANCE_API_SECRET=<secret>
+- BINANCE_TRADING_ENABLED=true
+- TRADING_MODE=live
+- LIVE_TRADING_ENABLED=true
+
+Production keys must be dedicated to Emma and restricted to the minimum permissions needed. Binance requires authenticated endpoints to use an API key and signature; the official documentation explicitly warns not to share API keys/secrets. The Spot Testnet uses `https://testnet.binance.vision`. Never put credentials in the frontend, GitHub, Supabase public config, chat, or source control.
+
+Recommended activation sequence:
+1. Connect Spot Testnet credentials.
+2. Verify `binance/status` and account authentication.
+3. Validate exchange symbol rules.
+4. Run test orders against `/api/v3/order/test`.
+5. Run paper trading and risk validation.
+6. Only after the strategy survives backtest + significance + Monte Carlo + walk-forward + paper, consider production credentials.
