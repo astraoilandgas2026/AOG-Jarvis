@@ -10,6 +10,8 @@ export const TOOL_REGISTRY=Object.freeze({
  "binance.balance":{id:"binance.balance",label:"Binance Balance",module:"trading",permission:"read",functionName:null,description:"Consulta balances autenticados de Binance."},
  "binance.exchange-info":{id:"binance.exchange-info",label:"Binance Exchange Info",module:"trading",permission:"read",functionName:null,description:"Consulta reglas de símbolos de Binance."},
  "binance.paper-order":{id:"binance.paper-order",label:"Binance Testnet Paper Order",module:"trading",permission:"write",functionName:null,description:"Valida una orden contra Binance Spot Testnet sin usar fondos reales."},
+ "freqtrade.status":{id:"freqtrade.status",label:"Freqtrade Engine Status",module:"trading",permission:"read",functionName:null,description:"Comprueba el motor Freqtrade local y su estado."},
+ "freqtrade.balance":{id:"freqtrade.balance",label:"Freqtrade Balance",module:"trading",permission:"read",functionName:null,description:"Consulta el balance expuesto por Freqtrade."},
  "emma.graph":{id:"emma.graph",label:"Emma Knowledge Graph",module:"emma",permission:"read",functionName:"jarvis-tool",description:"Consulta el grafo persistente de Emma y sus relaciones con evidencia."},
  "emma.research.save":{id:"emma.research.save",label:"Guardar investigación",module:"emma",permission:"write",functionName:"jarvis-tool",description:"Persiste evidencia externa con fuente, fecha, hash y entidades resueltas."},
  "emma.entity.resolve":{id:"emma.entity.resolve",label:"Resolver entidad",module:"emma",permission:"read",functionName:"jarvis-tool",description:"Resuelve nombres, alias y entidades canónicas sin duplicarlas."},
