@@ -15,10 +15,11 @@ const env={FREQTRADE_URL:"http://127.0.0.1:8080",FREQTRADE_USERNAME:"emma",FREQT
 const status=await freqtradeStatus(env);
 assert.equal(status.authenticated,true);
 assert.equal(status.status.ok,true);
-const login=calls[0];
+assert.equal(calls[0].url,"http://127.0.0.1:8080/api/v1/ping");
+const login=calls[1];
 assert.equal(login.url,"http://127.0.0.1:8080/api/v1/token/login");
 assert.match(login.options.headers.Authorization,/^Basic /);
 assert.equal(login.options.body,undefined);
-assert.equal(calls[1].url,"http://127.0.0.1:8080/api/v1/status");
+assert.equal(calls[2].url,"http://127.0.0.1:8080/api/v1/status");
 globalThis.fetch=originalFetch;
 console.log("freqtrade adapter tests passed");
