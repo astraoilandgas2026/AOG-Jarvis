@@ -1,4 +1,7 @@
 export const TOOL_REGISTRY=Object.freeze({
+ "ai.fcc.status":{id:"ai.fcc.status",label:"Free Claude Code Status",module:"ai",permission:"read",functionName:null,description:"Comprueba la integración conceptual de Free Claude Code y sus agentes/harnesses disponibles."},
+ "ai.fcc.agents":{id:"ai.fcc.agents",label:"FCC Agent Harnesses",module:"ai",permission:"read",functionName:null,description:"Consulta los harnesses de agentes de Free Claude Code que EMMA puede utilizar como capacidad externa."},
+ "ai.fcc.plan":{id:"ai.fcc.plan",label:"FCC Agent Plan",module:"ai",permission:"read",functionName:null,description:"Construye un plan de uso de FCC para tareas de coding, investigación o ejecución de agentes."},
  "ai.omniroute.status":{id:"ai.omniroute.status",label:"OmniRoute Status",module:"ai",permission:"read",functionName:null,description:"Comprueba el gateway local OmniRoute y su disponibilidad para EMMA."},
  "ai.omniroute.models":{id:"ai.omniroute.models",label:"OmniRoute Models",module:"ai",permission:"read",functionName:null,description:"Consulta dinámicamente los modelos disponibles a través de OmniRoute."},
  "ai.omniroute.route":{id:"ai.omniroute.route",label:"OmniRoute Router",module:"ai",permission:"read",functionName:null,description:"Selecciona y enruta tareas de EMMA a modelos/proveedores compatibles mediante el gateway local."},
