@@ -200,6 +200,14 @@ if(intent.tool==="binance.paper-order"){
  const answer=data?.data?.ok?"Orden de prueba aceptada por Binance Testnet.":"Binance Testnet: "+(data?.data?.error||"sin confirmación");
  addMessage("assistant",answer);speak(answer);return;
 }
+if(intent.tool==="freqtrade.status"){
+ if(!localBridge)throw new Error("LOCAL_BRIDGE_OFFLINE: inicia Emma Local Bridge para Freqtrade.");
+ const data=await bridgeCommand(localBridge,"freqtrade/status",{});
+ result.textContent=JSON.stringify(data,null,2);
+ const d=data?.data||data;
+ const answer="Freqtrade: "+(d?.configured?"configurado":"NO configurado")+" | motor: "+(d?.ping?.ok?"OK":"OFFLINE")+" | autenticación: "+(d?.authenticated?"OK":"pendiente")+".";
+ addMessage("assistant",answer);speak(answer);return;
+}
 if(intent.tool==="binance.status"||intent.tool==="binance.balance"){
  if(!localBridge)throw new Error("LOCAL_BRIDGE_OFFLINE: inicia Emma Local Bridge para Binance.");
  const route=intent.tool==="binance.balance"?"binance/balance":"binance/status";

@@ -1,0 +1,15 @@
+services:
+  freqtrade:
+    image: freqtradeorg/freqtrade:stable
+    restart: unless-stopped
+    container_name: emma-freqtrade
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./config:/freqtrade/user_data
+    command: >
+      trade
+      --config /freqtrade/user_data/config.json
+      --strategy EmmaDryRunStrategy
+    environment:
+      - TZ=America/Santiago

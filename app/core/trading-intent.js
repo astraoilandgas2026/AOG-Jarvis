@@ -3,6 +3,7 @@ export function classifyTradingIntent(text=""){
   if(!/(trading|trade|daytrading|day trading|scalp|scalping|mercado|market|btc|bitcoin|eth|ethereum|polymarket|oportunidades|oportunidad|jesse|freqtrade|darwinia|money sharks|openbook|freak trades|binance|saldo|balance|cuenta|exchange)/i.test(q))return null;
   if(/(?:mata|kill|emergency|detén|deten|apaga|stop).*(?:trading|bot|operación|operacion)/i.test(q))return {type:"tool",tool:"trading.kill"};
   if(/(?:binance|saldo|balance|cuenta).*(?:binance|trading|exchange)?/i.test(q)&&/(?:estado|status|salud|health|conect|saldo|balance|cuenta)/i.test(q))return {type:"tool",tool:"binance.status"};
+  if(/(?:freqtrade|motor de trading|motor trading|engine).*(?:estado|status|salud|health|conect|balance|saldo)?/i.test(q))return {type:"tool",tool:"freqtrade.status"};
   if(/(?:estado|status|salud|health).*(?:trading|bot|trading lab)/i.test(q))return {type:"tool",tool:"trading.status"};
   if(/(?:backtest|backtesting|prueba histórica|prueba historica|histórico|historico)/i.test(q))return {type:"tool",tool:"trading.backtest"};
   if(/(?:binance).*(?:compra|comprar|buy|vende|vender|sell).*(?:paper|testnet|simulad|demo|sin dinero)?|(?:paper|testnet).*(?:binance).*(?:compra|comprar|buy|vende|vender|sell)/i.test(q))return {type:"tool",tool:"binance.paper-order"};

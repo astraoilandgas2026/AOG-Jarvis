@@ -7,6 +7,7 @@ import { chromium } from "playwright";
 import { scanOpportunity, tradingStatus, riskGate } from "../app/modules/trading-lab.js";
 import { adapterHealth, runAdapter } from "../app/modules/trading-adapters.js";
 import { binanceStatus, binanceExchangeInfo, binanceBalance, binancePaperOrder, binanceOrder } from "../app/modules/binance-adapter.js";
+import { freqtradeStatus, freqtradeRequest } from "../app/modules/freqtrade-adapter.js";
 
 const PORT=Number(process.env.EMMA_BRIDGE_PORT||43177);
 const TOKEN=process.env.EMMA_BRIDGE_TOKEN||crypto.randomBytes(24).toString("hex");
@@ -132,6 +133,8 @@ const server=http.createServer(async(req,res)=>{
       return json(res,200,{ok:true,source:"binance_public_market_data",data:scanOpportunity(candles,{symbol,interval})},req);
     }
     if(command==="binance/status")return json(res,200,{ok:true,data:await binanceStatus(process.env)},req);
+    if(command==="freqtrade/status")return json(res,200,{ok:true,data:await freqtradeStatus(process.env)},req);
+    if(command==="freqtrade/request")return json(res,200,{ok:true,data:await freqtradeRequest(String(input?.action||"status"),input,process.env)},req);
     if(command==="binance/exchange-info")return json(res,200,{ok:true,data:await binanceExchangeInfo(input?.symbol,process.env)},req);
     if(command==="binance/balance")return json(res,200,{ok:true,data:await binanceBalance(process.env)},req);
     if(command==="binance/paper-order")return json(res,200,{ok:true,data:await binancePaperOrder(input,process.env)},req);
