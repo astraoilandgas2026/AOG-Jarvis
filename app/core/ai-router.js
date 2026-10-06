@@ -3,7 +3,8 @@ const PROVIDERS=Object.freeze({
  gemini:{id:"gemini",label:"Gemini",mode:"cloud",status:"active",model:"gemini-3.8-flash",capabilities:["chat","reasoning","code","vision","document-analysis","research"]},
  openai:{id:"openai",label:"OpenAI",mode:"cloud",status:"planned",capabilities:["chat","reasoning","code","vision","image","audio","video","document-generation"]},
  anthropic:{id:"anthropic",label:"Anthropic",mode:"cloud",status:"planned",capabilities:["chat","reasoning","code","vision","document-analysis"]},
- local:{id:"local",label:"Local model",mode:"local",status:"planned",capabilities:["chat","reasoning","code","vision","image","audio","video","document-generation"]}
+ local:{id:"local",label:"Local model",mode:"local",status:"planned",capabilities:["chat","reasoning","code","vision","image","audio","video","document-generation"]},
+ omniroute:{id:"omniroute",label:"OmniRoute",mode:"gateway",status:"active",model:"dynamic",endpoint:"http://127.0.0.1:20128/v1",capabilities:["chat","reasoning","code","vision","audio","image","research","agent-routing","mcp","a2a"]}
 });
 const FAILOVER_ORDER=["omniroute","groq","gemini","openai","anthropic","local"];
 export function getProviders(){return PROVIDERS}
