@@ -1,4 +1,7 @@
 export const TOOL_REGISTRY=Object.freeze({
+ "ai.omniroute.status":{id:"ai.omniroute.status",label:"OmniRoute Status",module:"ai",permission:"read",functionName:null,description:"Comprueba el gateway local OmniRoute y su disponibilidad para EMMA."},
+ "ai.omniroute.models":{id:"ai.omniroute.models",label:"OmniRoute Models",module:"ai",permission:"read",functionName:null,description:"Consulta dinámicamente los modelos disponibles a través de OmniRoute."},
+ "ai.omniroute.route":{id:"ai.omniroute.route",label:"OmniRoute Router",module:"ai",permission:"read",functionName:null,description:"Selecciona y enruta tareas de EMMA a modelos/proveedores compatibles mediante el gateway local."},
  "money.opportunity.rank":{id:"money.opportunity.rank",label:"Money Opportunity Ranker",module:"money",permission:"read",functionName:"emma-money",description:"Rankea oportunidades por expected value, riesgo, evidencia, capital y esfuerzo."},
  "money.opportunity.save":{id:"money.opportunity.save",label:"Guardar oportunidad",module:"money",permission:"write",functionName:"emma-money",description:"Persiste una oportunidad económica con score y decisión."},
  "money.opportunity.list":{id:"money.opportunity.list",label:"Oportunidades Money Lab",module:"money",permission:"read",functionName:"emma-money",description:"Consulta oportunidades económicas persistentes ordenadas por score."},
