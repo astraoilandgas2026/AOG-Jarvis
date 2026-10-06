@@ -22,7 +22,7 @@ export async function freqtradeRequest(action="status",payload={},env=process.en
   if(!base(env))return {ok:false,error:"FREQTRADE_NOT_CONFIGURED",configured:false};
   if(action==="ping")return request("/api/v1/ping",{},env);
   const t=await token(env); if(!t.ok)return t;
-  const routes={status:{method:"GET",path:"/api/v1/status"},balance:{method:"GET",path:"/api/v1/balance"},profit:{method:"GET",path:"/api/v1/profit"},whitelist:{method:"GET",path:"/api/v1/whitelist"}};
+  const routes={status:{method:"GET",path:"/api/v1/status"},balance:{method:"GET",path:"/api/v1/balance"},profit:{method:"GET",path:"/api/v1/profit"},whitelist:{method:"GET",path:"/api/v1/whitelist"},start:{method:"POST",path:"/api/v1/start"},stop:{method:"POST",path:"/api/v1/stop"},pause:{method:"POST",path:"/api/v1/pause"}};
   const route=routes[action]; if(!route)return {ok:false,error:"FREQTRADE_ACTION_UNSUPPORTED",action};
   return request(route.path,{method:route.method,headers:{Authorization:"Bearer "+t.access_token}},env);
 }
