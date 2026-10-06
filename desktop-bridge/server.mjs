@@ -6,6 +6,7 @@ import fs from "node:fs/promises";
 import { chromium } from "playwright";
 import { scanOpportunity, tradingStatus } from "../app/modules/trading-lab.js";
 import { adapterHealth, runAdapter } from "../app/modules/trading-adapters.js";
+import { binanceStatus, binanceExchangeInfo, binanceBalance, binanceOrder } from "../app/modules/binance-adapter.js";
 
 const PORT=Number(process.env.EMMA_BRIDGE_PORT||43177);
 const TOKEN=process.env.EMMA_BRIDGE_TOKEN||crypto.randomBytes(24).toString("hex");
@@ -130,6 +131,10 @@ const server=http.createServer(async(req,res)=>{
       const candles=raw.map(x=>({openTime:x[0],open:Number(x[1]),high:Number(x[2]),low:Number(x[3]),close:Number(x[4]),volume:Number(x[5]),closeTime:x[6]}));
       return json(res,200,{ok:true,source:"binance_public_market_data",data:scanOpportunity(candles,{symbol,interval})},req);
     }
+    if(command==="binance/status")return json(res,200,{ok:true,data:await binanceStatus(process.env)},req);
+    if(command==="binance/exchange-info")return json(res,200,{ok:true,data:await binanceExchangeInfo(input?.symbol,process.env)},req);
+    if(command==="binance/balance")return json(res,200,{ok:true,data:await binanceBalance(process.env)},req);
+    if(command==="binance/order")return json(res,200,{ok:true,data:await binanceOrder(input,process.env)},req);
     if(command==="trading/adapter"){
       const action=String(input?.action||"");
       const data=await runAdapter(action,input,process.env);
