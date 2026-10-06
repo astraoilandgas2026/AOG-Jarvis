@@ -4,6 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { chromium } from "playwright";
+import { scanOpportunity, tradingStatus } from "../app/modules/trading-lab.js";
+import { adapterHealth, runAdapter } from "../app/modules/trading-adapters.js";
 
 const PORT=Number(process.env.EMMA_BRIDGE_PORT||43177);
 const TOKEN=process.env.EMMA_BRIDGE_TOKEN||crypto.randomBytes(24).toString("hex");
@@ -93,6 +95,46 @@ const server=http.createServer(async(req,res)=>{
     const command=req.url.slice(4),input=await body(req);
     if(command==="backup/create")return json(res,200,await createBackup(),req);
     if(command==="backup/status")return json(res,200,await backupStatus(),req);
+    if(command==="trading/status"){
+      const killFile=path.join(os.homedir(),".emma","trading-kill-switch.json");
+      let killSwitch=true;
+      try{const state=JSON.parse(await fs.readFile(killFile,"utf8"));killSwitch=state.active!==false}catch{}
+      return json(res,200,{ok:true,kill_switch:killSwitch,status:tradingStatus(process.env),adapters:await adapterHealth(process.env)},req);
+    }
+    if(command==="trading/kill"){
+      const killFile=path.join(os.homedir(),".emma","trading-kill-switch.json");
+      await fs.mkdir(path.dirname(killFile),{recursive:true});
+      const active=input?.active!==false;
+      await fs.writeFile(killFile,JSON.stringify({active,updated_at:new Date().toISOString(),reason:String(input?.reason||"manual")},null,2),"utf8");
+      return json(res,200,{ok:true,active},req);
+    }
+    if(command==="trading/market"){
+      const symbol=String(input?.symbol||"BTCUSDT").toUpperCase().replace(/[^A-Z0-9]/g,"");
+      const interval=String(input?.interval||"1m");
+      const limit=Math.min(Math.max(Number(input?.limit)||120,60),500);
+      const url="https://data-api.binance.vision/api/v3/klines?symbol="+encodeURIComponent(symbol)+"&interval="+encodeURIComponent(interval)+"&limit="+limit;
+      const response=await fetch(url,{headers:{"Accept":"application/json"}});
+      if(!response.ok)throw new Error("MARKET_DATA_HTTP_"+response.status);
+      const raw=await response.json();
+      const candles=raw.map(x=>({openTime:x[0],open:Number(x[1]),high:Number(x[2]),low:Number(x[3]),close:Number(x[4]),volume:Number(x[5]),closeTime:x[6]}));
+      return json(res,200,{ok:true,source:"binance_public_market_data",symbol,interval,candles},req);
+    }
+    if(command==="trading/scan"){
+      const symbol=String(input?.symbol||"BTCUSDT").toUpperCase().replace(/[^A-Z0-9]/g,"");
+      const interval=String(input?.interval||"1m");
+      const limit=Math.min(Math.max(Number(input?.limit)||120,60),500);
+      const url="https://data-api.binance.vision/api/v3/klines?symbol="+encodeURIComponent(symbol)+"&interval="+encodeURIComponent(interval)+"&limit="+limit;
+      const response=await fetch(url,{headers:{"Accept":"application/json"}});
+      if(!response.ok)throw new Error("MARKET_DATA_HTTP_"+response.status);
+      const raw=await response.json();
+      const candles=raw.map(x=>({openTime:x[0],open:Number(x[1]),high:Number(x[2]),low:Number(x[3]),close:Number(x[4]),volume:Number(x[5]),closeTime:x[6]}));
+      return json(res,200,{ok:true,source:"binance_public_market_data",data:scanOpportunity(candles,{symbol,interval})},req);
+    }
+    if(command==="trading/adapter"){
+      const action=String(input?.action||"");
+      const data=await runAdapter(action,input,process.env);
+      return json(res,200,data,req);
+    }
 
     const p=await ensureBrowser();
 
