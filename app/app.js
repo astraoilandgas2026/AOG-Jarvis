@@ -19,6 +19,7 @@ import { automationPlan } from "./core/automation-engine.js";
 import { rankTools, PERFORMANCE_RULE } from "./core/performance-engine.js";
 import { saveSnapshot, loadSnapshot, isOffline } from "./core/offline-core.js";
 import { runResearchAgent } from "./modules/research-agent.js?v=1";
+import { TRADING_AGENTS } from "./modules/trading-lab.js";
 const supabase=createClient(CONFIG.supabaseUrl,CONFIG.supabasePublishableKey);
 const $=s=>document.querySelector(s);
 const command=$("#command"),messages=$("#messages"),chat=$("#chat"),home=$("#home");
@@ -187,6 +188,51 @@ if(intent.type==="task_list"){
 if(intent.tool==="execution.plan"){const kind=/correo|email|gmail/.test(q)?"email":/calendario|reunión|reunion|agenda/.test(q)?"calendar":/github|código|codigo|repo/.test(q)?"project":/documento|coa|sds|iscc|ficha/.test(q)?"documents":"supplier";const data=buildExecutionPlan(kind,executionRegistry());result.textContent=JSON.stringify(data,null,2);addMessage("assistant",`Plan ${kind} listo: ${data.steps.length} pasos, priorizando herramientas existentes y cero LLM innecesario.`);return}
 if(intent.tool==="execution.orchestrator"){const data=await orchestrateQuery(q);result.textContent=JSON.stringify(data,null,2);const ok=data.status==="completed";const answer=ok?"Orquestación ejecutada: "+data.steps.length+" pasos reales, sin LLM innecesario.":"Orquestación parcial: "+data.steps.length+" pasos, revisa los errores en resultados.";addMessage("assistant",answer);speak(answer);return}
 if(intent.tool==="automation.plan"){const data=automationPlan(q);result.textContent=JSON.stringify(data,null,2);const answer=data.supported?"Recurrencia detectada: "+data.cadence+". Plan listo para persistir/programar.":"No puedo programar esa recurrencia todavía: "+data.reason;addMessage("assistant",answer);speak(answer);return}
+if(intent.tool==="trading.status"){
+ if(!localBridge)throw new Error("LOCAL_BRIDGE_OFFLINE: inicia Emma Local Bridge para Trading Lab.");
+ const data=await bridgeCommand(localBridge,"trading/status",{});
+ result.textContent=JSON.stringify(data,null,2);
+ const answer=data?.ok?"Trading Lab: "+data.status.mode+". Kill switch: "+(data.kill_switch?"ACTIVO":"INACTIVO")+". Apalancamiento: "+data.status.leverage+".":"No se pudo consultar Trading Lab.";
+ addMessage("assistant",answer);speak(answer);return;
+}
+if(intent.tool==="trading.kill"){
+ if(!localBridge)throw new Error("LOCAL_BRIDGE_OFFLINE: inicia Emma Local Bridge para Trading Lab.");
+ const data=await bridgeCommand(localBridge,"trading/kill",{active:true,reason:"Emma command"});
+ result.textContent=JSON.stringify(data,null,2);
+ addMessage("assistant","Kill switch de trading ACTIVADO. No se permiten ejecuciones.");speak("Kill switch activado.");return;
+}
+if(intent.tool==="trading.market"||intent.tool==="trading.scan"){
+ if(!localBridge)throw new Error("LOCAL_BRIDGE_OFFLINE: inicia Emma Local Bridge para Trading Lab.");
+ const symbolMatch=q.match(/\b(BTC|ETH|SOL|BNB|XRP|ADA|DOGE|AVAX|LINK)(?:USDT|USD)?\b/i);
+ const symbol=(symbolMatch?.[1]||"BTC")+"USDT";
+ const intervalMatch=q.match(/\b(1m|3m|5m|15m|30m|1h|2h|4h)\b/i);
+ const interval=intervalMatch?.[1]||"1m";
+ const commandName=intent.tool==="trading.scan"?"trading/scan":"trading/market";
+ const data=await bridgeCommand(localBridge,commandName,{symbol,interval,limit:120});
+ result.textContent=JSON.stringify(data,null,2);
+ const d=data?.data;
+ const answer=intent.tool==="trading.scan"
+   ?(d?.status==="ok"?("Setup "+symbol+" "+interval+": "+d.direction+" | score "+d.score+" | "+d.action+". Datos de mercado, no ejecución."):("Scanner: "+(d?.reason||"sin datos suficientes")+"." ))
+   :("Market data "+symbol+" "+interval+" cargada.");
+ addMessage("assistant",answer);speak(answer);return;
+}
+if(intent.tool==="trading.research"){
+ const rows=Object.values(TRADING_AGENTS);
+ const answer=rows.map(a=>a.name+" — "+a.role+" ["+a.status+"]").join("\n");
+ result.textContent=JSON.stringify({agents:TRADING_AGENTS},null,2);
+ addMessage("assistant",answer);speak("Registro de agentes de trading cargado.");return;
+}
+if(intent.tool==="trading.backtest"||intent.tool==="trading.paper"){
+ if(!localBridge)throw new Error("LOCAL_BRIDGE_OFFLINE: inicia Emma Local Bridge para Trading Lab.");
+ const providerMatch=q.match(/\b(jesse|freqtrade|octobot)\b/i);
+ const provider=(providerMatch?.[1]||"jesse").toLowerCase();
+ if(intent.tool==="trading.paper"&&!/paper|simulad|demo|sin dinero/i.test(q))throw new Error("PAPER_MODE_REQUIRED");
+ if(intent.tool==="trading.paper"&&window.confirm("Enviar esta estrategia al adaptador PAPER de "+provider+"?")===false){addMessage("assistant","Paper trading cancelado.");return}
+ const data=await bridgeCommand(localBridge,"trading/adapter",{action:intent.tool==="trading.backtest"?"backtest":"paper",provider,query:q});
+ result.textContent=JSON.stringify(data,null,2);
+ const answer=data?.ok?"Trading "+(intent.tool==="trading.backtest"?"backtest":"paper")+" enviado a "+provider+".":"Adaptador "+provider+": "+(data?.error||"sin confirmación");
+ addMessage("assistant",answer);speak(answer);return;
+}
 if(intent.tool==="gmail.read"){const data=await invokeGoogle("gmail.list",{query:q.match(/(?:busca|buscar|encuentra)\s+(.+)/i)?.[1]||"in:inbox",max:10});result.textContent=JSON.stringify(data,null,2);const reply=data?.count?`Encontré ${data.count} correos en Gmail.`:"No encontré correos en Gmail.";addMessage("assistant",reply);speak(reply);return}
 if(intent.type==="action"&&intent.tool==="gmail.send"){const m=q.match(/(?:gmail.*?)(?:a|para)\s+([^\s]+).*?(?:asunto|subject)\s*[:=-]\s*(.+?)\s+(?:cuerpo|body|mensaje)\s*[:=-]\s*([\s\S]+)$/i);if(!m)throw new Error("Formato: Gmail a EMAIL asunto: ASUNTO cuerpo: MENSAJE");if(!window.confirm(`Enviar Gmail a ${m[1]}?\n\nAsunto: ${m[2]}`)){addMessage("assistant","Envío cancelado.");return}const data=await invokeGoogle("gmail.send",{to:m[1],subject:m[2].trim(),text:m[3].trim()});result.textContent=JSON.stringify(data,null,2);addMessage("assistant",data?.sent?"Gmail enviado.":"No se confirmó el envío.");speak(data?.sent?"Gmail enviado.":"No se confirmó el envío.");return}
 if(intent.tool==="calendar.read"){const data=await invokeGoogle("calendar.list",{});result.textContent=JSON.stringify(data,null,2);const reply=data?.count?`Encontré ${data.count} eventos en tu calendario.`:"No hay eventos en el período consultado.";addMessage("assistant",reply);speak(reply);return}
