@@ -33,7 +33,7 @@ function json(res,status,data,req){
   res.writeHead(status,{"Content-Type":"application/json","Access-Control-Allow-Origin":corsOrigin(req),"Access-Control-Allow-Credentials":"true","Access-Control-Allow-Headers":"Content-Type, X-Emma-Token","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Private-Network":"true","Vary":"Origin"});
   res.end(body);
 }
-function auth(req){return typeof req.headers["x-emma-token"]==="string"&&crypto.timingSafeEqual(Buffer.from(req.headers["x-emma-token"]),Buffer.from(TOKEN))}
+function auth(req){const supplied=req.headers["x-emma-token"];if(typeof supplied!=="string")return false;const a=Buffer.from(supplied),b=Buffer.from(TOKEN);return a.length===b.length&&crypto.timingSafeEqual(a,b)}
 async function tradingKillSwitch(){const killFile=path.join(os.homedir(),".emma","trading-kill-switch.json");try{const state=JSON.parse(await fs.readFile(killFile,"utf8"));return state.active!==false}catch{return true}}
 async function body(req){let s="";for await(const c of req)s+=c;return s?JSON.parse(s):{}}
 
