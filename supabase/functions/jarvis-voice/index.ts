@@ -6,6 +6,9 @@ const json=(body:unknown,status:number,h:any)=>new Response(JSON.stringify(body)
 Deno.serve(async(req)=>{
  const h=cors(req);if(req.method==="OPTIONS")return new Response("ok",{headers:h});if(req.method!=="POST")return json({error:"Method not allowed"},405,h);
  const auth=req.headers.get("Authorization");if(!auth?.startsWith("Bearer "))return json({error:"Authentication required"},401,h);
+ const db=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_ANON_KEY")!,{global:{headers:{Authorization:auth}}});
+ const {data:userData,error:authError}=await db.auth.getUser(auth.slice(7));
+ if(authError||!userData.user)return json({error:"Invalid authentication"},401,h);
  const key=Deno.env.get("ELEVENLABS_API_KEY");if(!key)return json({error:"ELEVENLABS_NOT_CONFIGURED"},503,h);
  let body:any;try{body=await req.json()}catch{return json({error:"Invalid JSON"},400,h)}
  const text=String(body.text||"").trim();let voiceId=String(body.voice_id||Deno.env.get("EMMA_ELEVENLABS_VOICE_ID")||"").trim();const modelId=String(body.model_id||"eleven_flash_v2_5");
