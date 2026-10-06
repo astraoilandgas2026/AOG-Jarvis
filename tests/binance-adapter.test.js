@@ -1,0 +1,10 @@
+import { strict as assert } from "node:assert";
+import { binanceStatus, binanceOrder, binancePaperOrder } from "../app/modules/binance-adapter.js";
+const noCreds=await binanceStatus({BINANCE_ENV:"testnet"});
+assert.equal(noCreds.provider,"binance");
+assert.equal(noCreds.environment,"testnet");
+assert.equal(noCreds.credentials_configured,false);
+assert.equal((await binanceOrder({symbol:"BTCUSDT",side:"BUY",quantity:"0.00001"},{BINANCE_TRADING_ENABLED:"false"})).error,"BINANCE_TRADING_DISABLED");
+assert.equal((await binanceOrder({symbol:"BTCUSDT",side:"BUY",quantity:"0.00001"},{BINANCE_TRADING_ENABLED:"true",TRADING_MODE:"paper",LIVE_TRADING_ENABLED:"false"})).error,"TRADING_MODE_NOT_LIVE");
+assert.equal((await binancePaperOrder({symbol:"BTCUSDT",side:"BUY",quantity:"0.00001"},{BINANCE_ENV:"testnet"})).error,"BINANCE_CREDENTIALS_NOT_CONFIGURED");
+console.log("BINANCE ADAPTER TEST PASS");
