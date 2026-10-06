@@ -1,10 +1,10 @@
 // OmniRoute is a local OpenAI-compatible gateway used as EMMA's model router.
 // It stays local by default; EMMA must never assume the gateway is reachable.
 export const OMNIROUTE_CONFIG=Object.freeze({
-  endpoint: process?.env?.OMNIROUTE_BASE_URL || "http://127.0.0.1:20128/v1",
-  healthUrl: process?.env?.OMNIROUTE_HEALTH_URL || "http://127.0.0.1:20128/health",
-  enabled: String(process?.env?.OMNIROUTE_ENABLED ?? "true").toLowerCase()==="true",
-  model: process?.env?.OMNIROUTE_MODEL || null,
+  endpoint: globalThis.process?.env?.OMNIROUTE_BASE_URL || "http://127.0.0.1:20128/v1",
+  healthUrl: globalThis.process?.env?.OMNIROUTE_HEALTH_URL || "http://127.0.0.1:20128/health",
+  enabled: String(globalThis.process?.env?.OMNIROUTE_ENABLED ?? "true").toLowerCase()==="true",
+  model: globalThis.process?.env?.OMNIROUTE_MODEL || null,
   role: "gateway"
 });
 
