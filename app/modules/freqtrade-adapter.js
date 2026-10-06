@@ -10,7 +10,8 @@ async function request(path,options={},env=process.env){
 }
 async function token(env=process.env){
   const {username,password}=auth(env); if(!username||!password)return {ok:false,error:"FREQTRADE_CREDENTIALS_NOT_CONFIGURED"};
-  const r=await request("/api/v1/token",{method:"POST",body:{username,password}},env); const access=r.data?.access_token; return access?{ok:true,access_token:access}:r;
+  const basic=Buffer.from(`${username}:${password}`).toString("base64");
+  const r=await request("/api/v1/token/login",{method:"POST",headers:{Authorization:`Basic ${basic}`}},env); const access=r.data?.access_token; return access?{ok:true,access_token:access}:r;
 }
 export async function freqtradeStatus(env=process.env){
   const ping=await request("/api/v1/ping",{},env),credentials=auth(env);
