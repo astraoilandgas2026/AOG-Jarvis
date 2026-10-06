@@ -33,7 +33,8 @@ function json(res,status,data,req){
   res.writeHead(status,{"Content-Type":"application/json","Access-Control-Allow-Origin":corsOrigin(req),"Access-Control-Allow-Credentials":"true","Access-Control-Allow-Headers":"Content-Type, X-Emma-Token","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Private-Network":"true","Vary":"Origin"});
   res.end(body);
 }
-function auth(req){return req.headers["x-emma-token"]===TOKEN}
+function auth(req){return typeof req.headers["x-emma-token"]==="string"&&crypto.timingSafeEqual(Buffer.from(req.headers["x-emma-token"]),Buffer.from(TOKEN))}
+async function tradingKillSwitch(){const killFile=path.join(os.homedir(),".emma","trading-kill-switch.json");try{const state=JSON.parse(await fs.readFile(killFile,"utf8"));return state.active!==false}catch{return true}}
 async function body(req){let s="";for await(const c of req)s+=c;return s?JSON.parse(s):{}}
 
 async function ensureBrowser(){
@@ -98,9 +99,7 @@ const server=http.createServer(async(req,res)=>{
     if(command==="backup/create")return json(res,200,await createBackup(),req);
     if(command==="backup/status")return json(res,200,await backupStatus(),req);
     if(command==="trading/status"){
-      const killFile=path.join(os.homedir(),".emma","trading-kill-switch.json");
-      let killSwitch=true;
-      try{const state=JSON.parse(await fs.readFile(killFile,"utf8"));killSwitch=state.active!==false}catch{}
+      const killSwitch=await tradingKillSwitch();
       return json(res,200,{ok:true,kill_switch:killSwitch,status:tradingStatus(process.env),adapters:await adapterHealth(process.env)},req);
     }
     if(command==="trading/kill"){
@@ -134,12 +133,17 @@ const server=http.createServer(async(req,res)=>{
     }
     if(command==="binance/status")return json(res,200,{ok:true,data:await binanceStatus(process.env)},req);
     if(command==="freqtrade/status")return json(res,200,{ok:true,data:await freqtradeStatus(process.env)},req);
-    if(command==="freqtrade/request")return json(res,200,{ok:true,data:await freqtradeRequest(String(input?.action||"status"),input,process.env)},req);
+    if(command==="freqtrade/request"){
+      const action=String(input?.action||"status");
+      if(action==="start"&&await tradingKillSwitch())return json(res,403,{ok:false,error:"KILL_SWITCH_ACTIVE"},req);
+      const data=await freqtradeRequest(action,input,process.env);
+      return json(res,data?.ok?200:502,{ok:Boolean(data?.ok),data},req);
+    }
     if(command==="binance/exchange-info")return json(res,200,{ok:true,data:await binanceExchangeInfo(input?.symbol,process.env)},req);
     if(command==="binance/balance")return json(res,200,{ok:true,data:await binanceBalance(process.env)},req);
     if(command==="binance/paper-order")return json(res,200,{ok:true,data:await binancePaperOrder(input,process.env)},req);
     if(command==="binance/order"){
-      const killFile=path.join(os.homedir(),".emma","trading-kill-switch.json");let killSwitch=true;try{const state=JSON.parse(await fs.readFile(killFile,"utf8"));killSwitch=state.active!==false}catch{}
+      const killSwitch=await tradingKillSwitch()
       const gate=riskGate(input,{mode:"live",killSwitch},{equity:Number(input?.equity||20),open_positions:Number(input?.open_positions||0),daily_loss_pct:Number(input?.daily_loss_pct||0),duplicateOrder:Boolean(input?.duplicateOrder),dataStale:Boolean(input?.dataStale)});
       if(!gate.allowed)return json(res,403,{ok:false,error:"RISK_GATE_BLOCKED",gate},req);
       return json(res,200,{ok:true,data:await binanceOrder(input,process.env)},req);
