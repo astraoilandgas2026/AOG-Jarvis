@@ -1,4 +1,11 @@
 export const TOOL_REGISTRY=Object.freeze({
+ "trading.status":{id:"trading.status",label:"Trading Lab Status",module:"trading",permission:"read",functionName:null,description:"Estado del laboratorio de trading y sus límites."},
+ "trading.market":{id:"trading.market",label:"Market Data",module:"trading",permission:"read",functionName:null,description:"Obtiene datos públicos de mercado para análisis."},
+ "trading.scan":{id:"trading.scan",label:"Daytrading Opportunities",module:"trading",permission:"read",functionName:null,description:"Escanea setups de mercado con reglas determinísticas y evidencia de datos."},
+ "trading.backtest":{id:"trading.backtest",label:"Trading Backtest",module:"trading",permission:"read",functionName:null,description:"Ejecuta backtests mediante un adaptador local configurado."},
+ "trading.paper":{id:"trading.paper",label:"Paper Trading",module:"trading",permission:"write",functionName:null,description:"Envía una estrategia al entorno paper configurado, nunca directamente al exchange."},
+ "trading.kill":{id:"trading.kill",label:"Trading Kill Switch",module:"trading",permission:"write",functionName:null,description:"Bloquea cualquier ejecución de trading en el puente local."},
+ "trading.research":{id:"trading.research",label:"Trading Research",module:"trading",permission:"read",functionName:null,description:"Consulta el registro de agentes y benchmarks de trading integrados."},
  "emma.graph":{id:"emma.graph",label:"Emma Knowledge Graph",module:"emma",permission:"read",functionName:"jarvis-tool",description:"Consulta el grafo persistente de Emma y sus relaciones con evidencia."},
  "emma.research.save":{id:"emma.research.save",label:"Guardar investigación",module:"emma",permission:"write",functionName:"jarvis-tool",description:"Persiste evidencia externa con fuente, fecha, hash y entidades resueltas."},
  "emma.entity.resolve":{id:"emma.entity.resolve",label:"Resolver entidad",module:"emma",permission:"read",functionName:"jarvis-tool",description:"Resuelve nombres, alias y entidades canónicas sin duplicarlas."},
