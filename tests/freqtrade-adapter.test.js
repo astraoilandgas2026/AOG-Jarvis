@@ -5,4 +5,7 @@ assert.equal((await freqtradeRequest("status",{},{})).ok,false);
 assert.equal((await freqtradeRequest("status",{},{})).error,"FREQTRADE_NOT_CONFIGURED");
 assert.equal((await freqtradeRequest("start",{},{})).error,"FREQTRADE_NOT_CONFIGURED");
 assert.equal((await freqtradeRequest("stop",{},{})).error,"FREQTRADE_NOT_CONFIGURED");
+const source = await (await fetch("https://raw.githubusercontent.com/astraoilandgas2026/AOG-Jarvis/main/app/modules/freqtrade-adapter.js")).text();
+assert.match(source, /\/api\/v1\/token\/login/);
+assert.match(source, /Authorization:`Basic \$\{basic\}`/);
 console.log("freqtrade adapter tests passed");
