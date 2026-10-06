@@ -30,7 +30,6 @@ jobs:
           node tests/trading-lab.test.js
           node tests/binance-adapter.test.js
           node tests/freqtrade-adapter.test.js
-          node tests/freqtrade-adapter.test.js
 
       - name: Check browser runtime syntax
         run: |
@@ -41,8 +40,13 @@ jobs:
           node --check app/modules/trading-adapters.js
           node --check app/modules/binance-adapter.js
           node --check app/modules/freqtrade-adapter.js
-          node --check app/modules/freqtrade-adapter.js
           node --check desktop-bridge/server.mjs
+
+      - name: Check Freqtrade strategy syntax
+        run: python -m py_compile freqtrade/config/strategies/EmmaDryRunStrategy.py
+
+      - name: Validate Freqtrade JSON
+        run: python -m json.tool freqtrade/config/config.json >/dev/null
 
       - name: Type-check critical Emma functions
         run: |
