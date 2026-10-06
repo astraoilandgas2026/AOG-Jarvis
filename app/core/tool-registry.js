@@ -1,4 +1,8 @@
 export const TOOL_REGISTRY=Object.freeze({
+ "money.opportunity.rank":{id:"money.opportunity.rank",label:"Money Opportunity Ranker",module:"money",permission:"read",functionName:"emma-money",description:"Rankea oportunidades por expected value, riesgo, evidencia, capital y esfuerzo."},
+ "money.opportunity.save":{id:"money.opportunity.save",label:"Guardar oportunidad",module:"money",permission:"write",functionName:"emma-money",description:"Persiste una oportunidad económica con score y decisión."},
+ "money.opportunity.list":{id:"money.opportunity.list",label:"Oportunidades Money Lab",module:"money",permission:"read",functionName:"emma-money",description:"Consulta oportunidades económicas persistentes ordenadas por score."},
+ "money.outcome.record":{id:"money.outcome.record",label:"Registrar resultado económico",module:"money",permission:"write",functionName:"emma-money",description:"Registra P&L y resultados para que Emma pueda aprender del desempeño."},
  "trading.status":{id:"trading.status",label:"Trading Lab Status",module:"trading",permission:"read",functionName:null,description:"Estado del laboratorio de trading y sus límites."},
  "trading.market":{id:"trading.market",label:"Market Data",module:"trading",permission:"read",functionName:null,description:"Obtiene datos públicos de mercado para análisis."},
  "trading.scan":{id:"trading.scan",label:"Daytrading Opportunities",module:"trading",permission:"read",functionName:null,description:"Escanea setups de mercado con reglas determinísticas y evidencia de datos."},

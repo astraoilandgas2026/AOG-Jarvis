@@ -3,6 +3,7 @@ export function classifyIntent(text=""){
  const q=text.trim().toLowerCase();
  if(!q)return{type:"empty",module:"conversation"};
  const trading=classifyTradingIntent(q); if(trading)return trading;
+ if(/(?:money lab|money engine|hacer dinero|ganar dinero|generar ingresos|oportunidades.*dinero|oportunidades.*rentab|alpha|expected value|retorno ajustado|capital allocation)/.test(q))return{type:"tool",module:"money",tool:/\\b(?:guarda|guardar|registra|registrar)\\b/.test(q)?"money.opportunity.save":/\\b(?:mis oportunidades|oportunidades guardadas|ranking|rankea|rankear)\\b/.test(q)?"money.opportunity.list":"money.opportunity.rank"};
  if(/\b(?:backup|respaldo)\b/.test(q))return{type:"operational",module:"local",tool:"local.backup"};
  if(/(?:recuérdame|recuerdame|recordatorio|alarma|pon una alarma|anota como pendiente|apunta como pendiente|agrega una tarea|añade una tarea)/.test(q))return{type:"task_create",module:"automation"};
  if(/(?:mis tareas|tareas pendientes|mis pendientes|qué tengo pendiente|que tengo pendiente|recordatorios pendientes)/.test(q))return{type:"task_list",module:"automation"};
