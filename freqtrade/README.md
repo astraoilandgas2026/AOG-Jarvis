@@ -10,3 +10,7 @@ Local trading engine. Default is dry-run with a $20 simulated wallet.
 Safety: dry_run=true, initial_state=stopped, max_open_trades=1, 5% balance ratio, spot only, no leverage, no withdrawals. Emma's kill switch and risk gate remain upstream.
 
 Do not commit .env or secrets.
+
+
+## Current status
+The engine is intentionally stopped by default. `start`/`pause`/`stop` are local lifecycle controls exposed to Emma; they do not enable live trading. Freqtrade dry-run persists simulated trades in `tradesv3.dryrun.sqlite`.

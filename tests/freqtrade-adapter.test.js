@@ -3,4 +3,6 @@ import { freqtradeStatus, freqtradeRequest } from "../app/modules/freqtrade-adap
 assert.equal((await freqtradeStatus({})).configured,false);
 assert.equal((await freqtradeRequest("status",{},{})).ok,false);
 assert.equal((await freqtradeRequest("status",{},{})).error,"FREQTRADE_NOT_CONFIGURED");
+assert.equal((await freqtradeRequest("start",{},{})).error,"FREQTRADE_NOT_CONFIGURED");
+assert.equal((await freqtradeRequest("stop",{},{})).error,"FREQTRADE_NOT_CONFIGURED");
 console.log("freqtrade adapter tests passed");
