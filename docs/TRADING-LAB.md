@@ -1,23 +1,22 @@
 # Emma Trading Lab
-
-Integrated roles:
-- Freak Trades: strategy/opportunity research reference; no automatic execution.
-- Jesse: backtest, optimization and paper/live adapter.
-- Darwinia: evolutionary/adversarial strategy research adapter.
-- OmniRoute: model routing/fallback layer.
-- OpenBook: Solana CLOB/orderbook market source.
-- Money Sharks: live multi-agent benchmark only; never copied as an execution strategy.
-- NIULAI4: Polymarket trader benchmark/reference only.
-- Miula / IA4 / E4 / RealC: retained as external research references; no unverified execution is wired.
-
-Operating modes:
-1. PAPER is the default.
-2. LIVE requires LIVE_TRADING_ENABLED=true plus an explicitly configured provider.
-3. Leverage is hard-coded to 1 in the Emma risk layer.
-4. Kill switch blocks execution.
-5. Opportunity scoring is market-data analysis, not a profitability guarantee.
+The trading layer is intentionally fail-closed.
 
 Pipeline:
-MARKET DATA -> OPPORTUNITY SCAN -> MULTI-AGENT RESEARCH -> BACKTEST -> ADVERSARIAL/WALK-FORWARD CHECK -> PAPER -> RISK GATE -> LIVE ADAPTER.
+MARKET DATA -> VALIDATION -> OPPORTUNITY SCAN -> MULTI-AGENT RESEARCH -> BACKTEST -> SIGNIFICANCE -> MONTE CARLO -> WALK-FORWARD -> PAPER -> RISK GATE -> LIVE.
 
-Emma does not move funds merely because an LLM recommends a trade.
+Implemented hardening:
+- Market candles are validated for count, price validity, timestamp consistency and staleness.
+- Risk gate enforces 1x leverage, per-trade risk, exposure, order-notional, open-position, daily-loss and duplicate/stale-data blocks.
+- Provider adapters no longer invent generic /backtest or /paper endpoints. Each real action requires an explicit provider URL environment variable.
+- Freqtrade health uses /api/v1/ping; its REST API is kept separate from backtesting.
+- Live execution is disabled unless LIVE_TRADING_ENABLED=true.
+- Research is represented as explicit gates. Jesse is expected to perform backtest, significance, Monte Carlo and walk-forward validation before a strategy can progress.
+- PAPER remains the default. No live order is created by an LLM recommendation alone.
+
+Provider configuration:
+- JESSE_URL + JESSE_BACKTEST_URL + JESSE_PAPER_URL
+- FREQTRADE_URL + FREQTRADE_BACKTEST_URL + FREQTRADE_PAPER_URL + FREQTRADE_LIVE_URL
+- OCTOBOT_URL + OCTOBOT_BACKTEST_URL + OCTOBOT_PAPER_URL + OCTOBOT_LIVE_URL
+- OMNIROUTE_URL + OMNIROUTE_BACKTEST_URL + OMNIROUTE_PAPER_URL
+
+Jesse's current documentation exposes backtests, significance tests, Monte Carlo and optimization through its workflow/MCP; the adapter therefore refuses to pretend that a generic REST endpoint exists.
