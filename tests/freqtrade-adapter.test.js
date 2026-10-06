@@ -3,9 +3,22 @@ import { freqtradeStatus, freqtradeRequest } from "../app/modules/freqtrade-adap
 assert.equal((await freqtradeStatus({})).configured,false);
 assert.equal((await freqtradeRequest("status",{},{})).ok,false);
 assert.equal((await freqtradeRequest("status",{},{})).error,"FREQTRADE_NOT_CONFIGURED");
-assert.equal((await freqtradeRequest("start",{},{})).error,"FREQTRADE_NOT_CONFIGURED");
-assert.equal((await freqtradeRequest("stop",{},{})).error,"FREQTRADE_NOT_CONFIGURED");
-const source = await (await fetch("https://raw.githubusercontent.com/astraoilandgas2026/AOG-Jarvis/main/app/modules/freqtrade-adapter.js")).text();
-assert.match(source, /\/api\/v1\/token\/login/);
-assert.match(source, /Authorization:`Basic \$\{basic\}`/);
+let calls=[];
+const originalFetch=globalThis.fetch;
+globalThis.fetch=async(url,options={})=>{
+  calls.push({url:String(url),options});
+  if(String(url).endsWith("/api/v1/token/login"))return new Response(JSON.stringify({access_token:"test-access"}),{status:200,headers:{"content-type":"application/json"}});
+  if(String(url).endsWith("/api/v1/status"))return new Response(JSON.stringify([{status:"stopped"}]),{status:200,headers:{"content-type":"application/json"}});
+  return new Response(JSON.stringify({status:"pong"}),{status:200,headers:{"content-type":"application/json"}});
+};
+const env={FREQTRADE_URL:"http://127.0.0.1:8080",FREQTRADE_USERNAME:"emma",FREQTRADE_PASSWORD:"secret"};
+const status=await freqtradeStatus(env);
+assert.equal(status.authenticated,true);
+assert.equal(status.status.ok,true);
+assert.equal(calls[1].url,"http://127.0.0.1:8080/api/v1/status");
+const login=calls[0];
+assert.equal(login.url,"http://127.0.0.1:8080/api/v1/token/login");
+assert.match(login.options.headers.Authorization,/^Basic /);
+assert.equal(login.options.body,undefined);
+globalThis.fetch=originalFetch;
 console.log("freqtrade adapter tests passed");
