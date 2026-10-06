@@ -12,4 +12,7 @@ services:
       --config /freqtrade/user_data/config.json
       --strategy EmmaDryRunStrategy
     environment:
-      - TZ=America/Santiago
+      TZ: America/Santiago
+      FREQTRADE__API_SERVER__JWT_SECRET_KEY: ${FREQTRADE_JWT_SECRET}
+      FREQTRADE__API_SERVER__USERNAME: ${FREQTRADE_USERNAME}
+      FREQTRADE__API_SERVER__PASSWORD: ${FREQTRADE_PASSWORD}
