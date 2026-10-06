@@ -4,8 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { chromium } from "playwright";
-import { scanOpportunity, tradingStatus } from "../app/modules/trading-lab.js";
+import { scanOpportunity, tradingStatus, riskGate } from "../app/modules/trading-lab.js";
 import { adapterHealth, runAdapter } from "../app/modules/trading-adapters.js";
+import { binanceStatus, binanceExchangeInfo, binanceBalance, binancePaperOrder, binanceOrder } from "../app/modules/binance-adapter.js";
 
 const PORT=Number(process.env.EMMA_BRIDGE_PORT||43177);
 const TOKEN=process.env.EMMA_BRIDGE_TOKEN||crypto.randomBytes(24).toString("hex");
@@ -129,6 +130,16 @@ const server=http.createServer(async(req,res)=>{
       const raw=await response.json();
       const candles=raw.map(x=>({openTime:x[0],open:Number(x[1]),high:Number(x[2]),low:Number(x[3]),close:Number(x[4]),volume:Number(x[5]),closeTime:x[6]}));
       return json(res,200,{ok:true,source:"binance_public_market_data",data:scanOpportunity(candles,{symbol,interval})},req);
+    }
+    if(command==="binance/status")return json(res,200,{ok:true,data:await binanceStatus(process.env)},req);
+    if(command==="binance/exchange-info")return json(res,200,{ok:true,data:await binanceExchangeInfo(input?.symbol,process.env)},req);
+    if(command==="binance/balance")return json(res,200,{ok:true,data:await binanceBalance(process.env)},req);
+    if(command==="binance/paper-order")return json(res,200,{ok:true,data:await binancePaperOrder(input,process.env)},req);
+    if(command==="binance/order"){
+      const killFile=path.join(os.homedir(),".emma","trading-kill-switch.json");let killSwitch=true;try{const state=JSON.parse(await fs.readFile(killFile,"utf8"));killSwitch=state.active!==false}catch{}
+      const gate=riskGate(input,{mode:"live",killSwitch},{equity:Number(input?.equity||20),open_positions:Number(input?.open_positions||0),daily_loss_pct:Number(input?.daily_loss_pct||0),duplicateOrder:Boolean(input?.duplicateOrder),dataStale:Boolean(input?.dataStale)});
+      if(!gate.allowed)return json(res,403,{ok:false,error:"RISK_GATE_BLOCKED",gate},req);
+      return json(res,200,{ok:true,data:await binanceOrder(input,process.env)},req);
     }
     if(command==="trading/adapter"){
       const action=String(input?.action||"");

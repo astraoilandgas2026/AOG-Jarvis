@@ -188,6 +188,29 @@ if(intent.type==="task_list"){
 if(intent.tool==="execution.plan"){const kind=/correo|email|gmail/.test(q)?"email":/calendario|reunión|reunion|agenda/.test(q)?"calendar":/github|código|codigo|repo/.test(q)?"project":/documento|coa|sds|iscc|ficha/.test(q)?"documents":"supplier";const data=buildExecutionPlan(kind,executionRegistry());result.textContent=JSON.stringify(data,null,2);addMessage("assistant",`Plan ${kind} listo: ${data.steps.length} pasos, priorizando herramientas existentes y cero LLM innecesario.`);return}
 if(intent.tool==="execution.orchestrator"){const data=await orchestrateQuery(q);result.textContent=JSON.stringify(data,null,2);const ok=data.status==="completed";const answer=ok?"Orquestación ejecutada: "+data.steps.length+" pasos reales, sin LLM innecesario.":"Orquestación parcial: "+data.steps.length+" pasos, revisa los errores en resultados.";addMessage("assistant",answer);speak(answer);return}
 if(intent.tool==="automation.plan"){const data=automationPlan(q);result.textContent=JSON.stringify(data,null,2);const answer=data.supported?"Recurrencia detectada: "+data.cadence+". Plan listo para persistir/programar.":"No puedo programar esa recurrencia todavía: "+data.reason;addMessage("assistant",answer);speak(answer);return}
+if(intent.tool==="binance.paper-order"){
+ if(!localBridge)throw new Error("LOCAL_BRIDGE_OFFLINE: inicia Emma Local Bridge para Binance.");
+ const symbolMatch=q.match(/\b(BTC|ETH|SOL|BNB|XRP|ADA|DOGE|AVAX|LINK)USDT\b/i);
+ const side=/\b(sell|vende|vender)\b/i.test(q)?"SELL":"BUY";
+ const qtyMatch=q.match(/(?:cantidad|qty|quantity)\s*[:=]?\s*(\d+(?:\.\d+)?)/i);
+ const quantity=qtyMatch?.[1]||"0.00001";
+ if(window.confirm("Enviar orden de prueba a Binance Spot Testnet?\n\n"+side+" "+(symbolMatch?.[0]||"BTCUSDT")+" qty "+quantity)===false){addMessage("assistant","Orden de prueba cancelada.");return}
+ const data=await bridgeCommand(localBridge,"binance/paper-order",{symbol:(symbolMatch?.[0]||"BTCUSDT").toUpperCase(),side,quantity,type:"MARKET"});
+ result.textContent=JSON.stringify(data,null,2);
+ const answer=data?.data?.ok?"Orden de prueba aceptada por Binance Testnet.":"Binance Testnet: "+(data?.data?.error||"sin confirmación");
+ addMessage("assistant",answer);speak(answer);return;
+}
+if(intent.tool==="binance.status"||intent.tool==="binance.balance"){
+ if(!localBridge)throw new Error("LOCAL_BRIDGE_OFFLINE: inicia Emma Local Bridge para Binance.");
+ const route=intent.tool==="binance.balance"?"binance/balance":"binance/status";
+ const data=await bridgeCommand(localBridge,route,{});
+ result.textContent=JSON.stringify(data,null,2);
+ const d=data?.data||data;
+ const answer=route==="binance/status"
+   ?("Binance: "+(d?.environment||"desconocido")+" | API: "+(d?.credentials_configured?"configurada":"NO configurada")+" | conexión: "+(d?.ping?.ok?"OK":"ERROR")+".")
+   :(d?.ok?"Balance Binance consultado.":"No se pudo consultar el balance: "+(d?.error||"error"));
+ addMessage("assistant",answer);speak(answer);return;
+}
 if(intent.tool==="trading.status"){
  if(!localBridge)throw new Error("LOCAL_BRIDGE_OFFLINE: inicia Emma Local Bridge para Trading Lab.");
  const data=await bridgeCommand(localBridge,"trading/status",{});

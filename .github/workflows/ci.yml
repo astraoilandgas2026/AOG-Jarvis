@@ -26,7 +26,9 @@ jobs:
         run: deno test --no-config core/smart-router.test.js app/core/emma-runtime.test.js
 
       - name: Run trading lab tests
-        run: node tests/trading-lab.test.js
+        run: |
+          node tests/trading-lab.test.js
+          node tests/binance-adapter.test.js
 
       - name: Check browser runtime syntax
         run: |
@@ -35,6 +37,7 @@ jobs:
           node --check app/core/trading-intent.js
           node --check app/modules/trading-lab.js
           node --check app/modules/trading-adapters.js
+          node --check app/modules/binance-adapter.js
           node --check desktop-bridge/server.mjs
 
       - name: Type-check critical Emma functions
