@@ -1,0 +1,16 @@
+import { strict as assert } from "node:assert";
+import { classifyTradingIntent } from "../app/core/trading-intent.js";
+import { riskGate, scanOpportunity, tradingStatus } from "../app/modules/trading-lab.js";
+assert.equal(classifyTradingIntent("dame oportunidades de daytrading BTC").tool,"trading.scan");
+assert.equal(classifyTradingIntent("estado del trading bot").tool,"trading.status");
+assert.equal(classifyTradingIntent("haz backtest de BTC").tool,"trading.backtest");
+assert.equal(classifyTradingIntent("activa paper trading").tool,"trading.paper");
+assert.equal(classifyTradingIntent("investiga Jesse y Darwinia").tool,"trading.research");
+const denied=riskGate({quantity:1,price:1,risk_pct:2},{startingCapital:20,maxRiskPerTradePct:1,maxExposurePct:5,maxDailyLossPct:2,killSwitch:false},{equity:20,daily_loss_pct:0});
+assert.equal(denied.allowed,false);assert.ok(denied.reasons.includes("RISK_PER_TRADE_LIMIT"));
+const candles=Array.from({length:80},(_,i)=>({close:100+i*0.5}));
+const scan=scanOpportunity(candles,{symbol:"BTCUSDT",interval:"1m"});
+assert.equal(scan.status,"ok");assert.ok(scan.score>0);
+const status=tradingStatus({TRADING_MODE:"paper",LIVE_TRADING_ENABLED:"false"});
+assert.equal(status.mode,"paper");assert.equal(status.live_enabled,false);assert.equal(status.leverage,1);
+console.log("TRADING LAB PASS");
