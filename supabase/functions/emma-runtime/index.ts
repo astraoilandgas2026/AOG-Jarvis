@@ -24,7 +24,7 @@ async function runAstra(db:any){
   const [sup,offers,followups,dd]=await Promise.all([
     db.from("suppliers").select("id",{count:"exact",head:true}),
     db.from("commercial_offers").select("id",{count:"exact",head:true}),
-    db.from("follow_ups").select("id",{count:"exact",head:true}).neq("status","done"),
+    db.from("follow_ups").select("id",{count:"exact",head:true}).neq("status","completed"),
     db.from("due_diligence").select("id",{count:"exact",head:true})
   ]);
   const errors=[sup,offers,followups,dd].filter(x=>x.error).map(x=>x.error.message);
@@ -80,7 +80,7 @@ async function main(req:Request){
       await admin.from("emma_automation_runs").update({status,result,evidence:result.evidence||[],completed_at:new Date().toISOString()}).eq("id",runId);
       results.push({automation_id:job.id,run_id:runId,status,workflow,result});
     }catch(error){
-      const message=error instanceof Error?error.message:String(error);
+      const message=error instanceof Error?error.message:(error?.message?String(error.message):JSON.stringify(error));
       await admin.from("emma_automation_runs").update({status:"failed",error:message,completed_at:new Date().toISOString()}).eq("id",runId);
       results.push({automation_id:job.id,run_id:runId,status:"failed",error:message});
     }
