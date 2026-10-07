@@ -80,7 +80,7 @@ async function main(req:Request){
       await admin.from("emma_automation_runs").update({status,result,evidence:result.evidence||[],completed_at:new Date().toISOString()}).eq("id",runId);
       results.push({automation_id:job.id,run_id:runId,status,workflow,result});
     }catch(error){
-      const message=error instanceof Error?error.message:(error?.message?String(error.message):JSON.stringify(error));
+      const errorRecord=error as {message?:unknown}; const message=error instanceof Error?error.message:(errorRecord.message?String(errorRecord.message):JSON.stringify(error));
       await admin.from("emma_automation_runs").update({status:"failed",error:message,completed_at:new Date().toISOString()}).eq("id",runId);
       results.push({automation_id:job.id,run_id:runId,status:"failed",error:message});
     }
