@@ -338,7 +338,7 @@ logout.onclick=()=>supabase.auth.signOut();$("#execute").onclick=()=>{primeAudio
 supabase.auth.onAuthStateChange((_event,session)=>renderSession(session));
 const {data:{session}}=await supabase.auth.getSession();
 if(session){renderSession(session);await ensureDefaultAutomations(session)}else{setStatus("CONECTANDO EMMA");try{const ensured=await ensureAuth();await ensureDefaultAutomations(ensured)}catch(error){setStatus("CONFIGURACIÓN DE ACCESO PENDIENTE");console.error("Anonymous auth unavailable",error)}}
-try{ mobileBridge=createMobileBridge({supabase,onStatus:state=>{ if(state.connected) setStatus("EMMA LISTA · SAMSUNG CONECTADO"); },onTask:async task=>{
+try{ mobileBridge=createMobileBridge({supabase,onStatus:state=>{ if(state.connected) setStatus(localBridge?"EMMA LISTA · SAMSUNG + BRIDGE":"EMMA LISTA · SAMSUNG CONECTADO"); },onTask:async task=>{
  if(task?.task_type==="notification"&&task.payload){
   const title=String(task.payload.title||"Emma").slice(0,120),body=String(task.payload.body||"").slice(0,500);
   if("Notification"in window&&Notification.permission==="granted"){new Notification(title,{body,icon:"./icon.svg",tag:"emma-"+task.id});return{ok:true,delivered:true,channel:"browser_notification"}}
