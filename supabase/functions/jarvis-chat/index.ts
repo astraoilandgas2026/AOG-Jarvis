@@ -158,12 +158,40 @@ ${suppliedContext||"(sin contexto adicional)"}
     if(!apiKey){failures.push({provider:provider.id,reason:"not_configured"});continue;}
     try{
       if(provider.id==="groq"){
-        const result=await callGroq(apiKey,messages);
-        if(!result.text)throw providerError(502,"Empty provider response");
-        if(needsMemory)await saveMemory(db,userId,message);
-        await logInteraction(db,userId,"assistant",result.text,"raw",{session_id:sessionId,provider:provider.id,model:provider.model});
-        await logProvider(db,userId,provider.id,provider.model,"success",null,result.latency);
-        return new Response(JSON.stringify({ok:true,user_id:userId,provider:provider.id,model:provider.model,failover:failures.length>0,text:result.text}),{status:200,headers:{...headers,"Content-Type":"application/json"}});
+        const encoder=new TextEncoder();
+        const stream=new ReadableStream({
+          async start(controller){
+            try{
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"start",provider:"groq"})}\\n\\n`));
+              const result=await callGroq(apiKey,messages,(chunk)=>controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"delta",text:chunk})}\\n\\n`)));
+              if(!result.text)throw providerError(502,"Empty provider response");
+              if(needsMemory)await saveMemory(db,userId,message);
+              await logInteraction(db,userId,"assistant",result.text,"raw",{session_id:sessionId,provider:provider.id,model:provider.model});
+              await logProvider(db,userId,provider.id,provider.model,"success",null,result.latency);
+              controller.enqueue(encoder.encode("data: [DONE]\\n\\n"));controller.close();
+            }catch(error){
+              const status=(error as any)?.status??502;
+              await logProvider(db,userId,provider.id,provider.model,"failed",String(status),null);
+              const fallbackKey=Deno.env.get("GEMINI_API_KEY");
+              if(!fallbackKey){
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"error",message:error instanceof Error?error.message:"Provider error"})}\\n\\n`));controller.close();return;
+              }
+              try{
+                const fallback=await callGemini(fallbackKey,messages);
+                if(!fallback.text)throw providerError(502,"Empty fallback response");
+                if(needsMemory)await saveMemory(db,userId,message);
+                await logInteraction(db,userId,"assistant",fallback.text,"raw",{session_id:sessionId,provider:"gemini",model:"gemini-3.8-flash",fallback_from:"groq"});
+                await logProvider(db,userId,"gemini","gemini-3.8-flash","success",null,fallback.latency);
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"fallback",provider:"gemini"})}\\n\\n`));
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"delta",text:fallback.text})}\\n\\n`));
+                controller.enqueue(encoder.encode("data: [DONE]\\n\\n"));controller.close();
+              }catch(fallbackError){
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"error",message:fallbackError instanceof Error?fallbackError.message:"All providers unavailable"})}\\n\\n`));controller.close();
+              }
+            }
+          }
+        });
+        return new Response(stream,{status:200,headers:{...headers,"Content-Type":"text/event-stream; charset=utf-8","Cache-Control":"no-cache, no-transform","X-Accel-Buffering":"no"}});
       }
       const result=await callGemini(apiKey,messages);
       if(!result.text)throw providerError(502,"Empty provider response");
