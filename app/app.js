@@ -87,6 +87,8 @@ async function orchestrateQuery(q){
 function parseDueAt(q){const rel=q.match(/en\s+(\d+)\s*(minutos?|horas?)/i);if(!rel)return null;const d=new Date();d.setMinutes(d.getMinutes()+Number(rel[1])*(rel[2].toLowerCase().startsWith("hora")?60:1));return d.toISOString()}
 function parseTaskTitle(q){return q.replace(/^(?:emma[,\s]*)?(?:pon|crea|agrega|añade|anota|apunta|programa|recuérdame|recuerdame|alarma|recordatorio)\s*/i,"").trim()||q}
 async function invokeChat(q,context=null){
+  const fast=fastReply(q);
+  if(fast)return fast;
   await ensureAuth();
   const session=(await supabase.auth.getSession()).data.session;
   if(!session?.access_token)throw new Error("AUTH_SESSION");
