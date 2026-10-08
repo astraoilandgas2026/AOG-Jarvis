@@ -27,10 +27,12 @@ if [ ! -f /root/emma/bridge-token ]; then
   umask 077
   head -c 32 /dev/urandom | od -An -tx1 | tr -d " \n" > /root/emma/bridge-token
 fi
-echo "[Emma] Bootstrap complete."
-echo "[Emma] Start with:"
-echo "  export EMMA_BRIDGE_TOKEN=\$(cat /root/emma/bridge-token)"
-echo "  node /root/emma/mobile-bridge/server.mjs"
-echo "[Emma] Health:"
-echo "  curl -H "X-Emma-Token: \$(cat /root/emma/bridge-token)" http://127.0.0.1:43177/health"
+pkill -f "node /root/emma/mobile-bridge/server.mjs" 2>/dev/null || true
+export EMMA_BRIDGE_TOKEN="$(cat /root/emma/bridge-token)"
+nohup node /root/emma/mobile-bridge/server.mjs >/root/emma/bridge.log 2>&1 &
+sleep 1
+curl -fsS -H "X-Emma-Token: $EMMA_BRIDGE_TOKEN" http://127.0.0.1:43177/health
+echo
+echo "[Emma] BRIDGE ONLINE"
+echo "[Emma] Token stored locally at /root/emma/bridge-token"
 '
