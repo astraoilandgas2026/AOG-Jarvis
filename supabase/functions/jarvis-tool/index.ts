@@ -101,6 +101,15 @@ Deno.serve(async(req:Request)=>{
  const memoryId=typeof body.memory_id==="string"?body.memory_id:"";
  const limit=Math.min(Math.max(Number(body.limit)||10,1),20);
  if(!tool)return json({error:"Tool required"},400,h);
+ async function resolveSupplierIdsForQuery(text:string){
+   const terms=searchPattern(text);
+   const patterns=terms.map(t=>"%"+t.replace(/[%_]/g,"\\ if(!tool)return json({error:"Tool required"},400,h);")+"%");
+   if(!patterns.length)return [];
+   const supplierOr=patterns.map(p=>`legal_name.ilike.${p},trading_name.ilike.${p},tax_id.ilike.${p}`).join(",");
+   const {data,error}=await db.from("suppliers").select("id").or(supplierOr).limit(20);
+   if(error)throw error;
+   return (data||[]).map((x:any)=>x.id);
+ }
 
  if(tool==="emma.entity.seed"){
    const count=await ensureEntityAliases(db,userData.user.id);
