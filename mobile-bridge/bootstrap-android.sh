@@ -22,12 +22,7 @@ fi
 kraken status >/dev/null
 mkdir -p /root/emma/mobile-bridge
 cd /root/emma
-if [ ! -d AOG-Jarvis/.git ]; then
-  git clone --depth 1 https://github.com/astraoilandgas2026/AOG-Jarvis.git
-else
-  git -C AOG-Jarvis pull --ff-only
-fi
-cp AOG-Jarvis/mobile-bridge/server.mjs /root/emma/mobile-bridge/server.mjs
+curl --proto "=https" --tlsv1.2 -fsSL https://raw.githubusercontent.com/astraoilandgas2026/AOG-Jarvis/main/mobile-bridge/server.mjs -o /root/emma/mobile-bridge/server.mjs
 if [ ! -f /root/emma/bridge-token ]; then
   umask 077
   head -c 32 /dev/urandom | od -An -tx1 | tr -d " \n" > /root/emma/bridge-token
