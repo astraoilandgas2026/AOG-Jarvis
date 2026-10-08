@@ -95,8 +95,8 @@ async function invokeChat(q,context=null){
   const response=await fetch(`${CONFIG.supabaseUrl}/functions/v1/jarvis-chat`,{
     method:"POST",
     headers:{"Authorization":`Bearer ${session.access_token}`,"apikey":CONFIG.supabasePublishableKey,"Content-Type":"application/json"},
-    body:JSON.stringify({message:q,history,context,client_date:new Date().toLocaleDateString("en-CA")}),cache:"no-store"
-  });
+    body:JSON.stringify({message:q,history:history.slice(-6),context,client_date:new Date().toLocaleDateString("en-CA")}),cache:"no-store"
+  }),12000,"CHAT_TIMEOUT");
   if(!response.ok)throw new Error((await response.text()).slice(0,800));
   const type=response.headers.get("content-type")||"";
   if(!type.includes("text/event-stream")){
@@ -121,7 +121,7 @@ async function invokeChat(q,context=null){
       const p=line.slice(5).trim();
       if(!p||p==="[DONE]")continue;
       const chunk=JSON.parse(p);
-      if(chunk.type==="fallback"&&chunk.provider)statusEl?.setAttribute("data-provider",chunk.provider);if(chunk.type==="delta"){
+      if(chunk.type==="fallback"&&chunk.provider)setStatus("NÚCLEO · "+chunk.provider.toUpperCase());if(chunk.type==="delta"){
         answer+=chunk.text||"";
         bubble.textContent=answer;
         messages.scrollTop=messages.scrollHeight;
