@@ -68,12 +68,20 @@ if [ -f /root/emma/bridge.pid ]; then
   kill "$(cat /root/emma/bridge.pid)" 2>/dev/null || true
   rm -f /root/emma/bridge.pid
 fi
-nohup env EMMA_BRIDGE_TOKEN="$EMMA_BRIDGE_TOKEN" EMMA_SUPABASE_URL="$EMMA_SUPABASE_URL" EMMA_DEVICE_KEY="$EMMA_DEVICE_KEY" EMMA_CLOUD_TOKEN="$EMMA_CLOUD_TOKEN" node /root/emma/mobile-bridge/server.mjs >/root/emma/bridge.log 2>&1 &
-echo $! > /root/emma/bridge.pid
-sleep 1
-curl -fsS -H "X-Emma-Token: $EMMA_BRIDGE_TOKEN" http://127.0.0.1:43177/health
-echo
-echo "[Emma] BRIDGE ONLINE"
-echo "[Emma] Cloud relay configured"
-echo "[Emma] Token stored locally at /root/emma/bridge-token"
+: > /root/emma/bridge.log
+env EMMA_BRIDGE_TOKEN="$EMMA_BRIDGE_TOKEN" EMMA_SUPABASE_URL="$EMMA_SUPABASE_URL" EMMA_DEVICE_KEY="$EMMA_DEVICE_KEY" EMMA_CLOUD_TOKEN="$EMMA_CLOUD_TOKEN" node /root/emma/mobile-bridge/server.mjs >/root/emma/bridge.log 2>&1 &
+BRIDGE_PID=$!
+echo "$BRIDGE_PID" > /root/emma/bridge.pid
+sleep 2
+if kill -0 "$BRIDGE_PID" 2>/dev/null && curl -fsS -H "X-Emma-Token: $EMMA_BRIDGE_TOKEN" http://127.0.0.1:43177/health >/dev/null; then
+  echo '{"ok":true,"name":"Emma Android Local Bridge","cloud_relay":true,"pid":'"$BRIDGE_PID"'}'
+  echo "[Emma] BRIDGE ONLINE"
+  echo "[Emma] Cloud relay configured"
+  echo "[Emma] Token stored locally at /root/emma/bridge-token"
+else
+  echo "[Emma] BRIDGE FAILED TO START"
+  echo "[Emma] bridge.log:"
+  cat /root/emma/bridge.log
+  exit 1
+fi
 '
