@@ -32,9 +32,13 @@ if [ ! -f /root/emma/bridge-token ]; then
   umask 077
   head -c 32 /dev/urandom | od -An -tx1 | tr -d " \n" > /root/emma/bridge-token
 fi
-pkill -f "node /root/emma/mobile-bridge/server.mjs" 2>/dev/null || true
+if [ -f /root/emma/bridge.pid ]; then
+  kill "$(cat /root/emma/bridge.pid)" 2>/dev/null || true
+  rm -f /root/emma/bridge.pid
+fi
 export EMMA_BRIDGE_TOKEN="$(cat /root/emma/bridge-token)"
 nohup node /root/emma/mobile-bridge/server.mjs >/root/emma/bridge.log 2>&1 &
+echo $! > /root/emma/bridge.pid
 sleep 1
 curl -fsS -H "X-Emma-Token: $EMMA_BRIDGE_TOKEN" http://127.0.0.1:43177/health
 echo
