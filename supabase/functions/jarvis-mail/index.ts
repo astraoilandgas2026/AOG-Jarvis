@@ -29,7 +29,7 @@ async function authorized(req:Request){
   if(error||!data.user) throw new Error("Invalid authentication");
   const {data:ok,error:ae}=await db.rpc("emma_is_authorized");
   if(ae||ok!==true) throw new Error("Forbidden");
-  return {user:data.user};
+  return {db,user:data.user};
 }
 async function mailbox(){
   const me=await hostinger("/me");
