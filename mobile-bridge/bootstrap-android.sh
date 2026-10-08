@@ -10,12 +10,14 @@ echo "[Emma] Repairing Debian package state and installing runtime..."
 proot-distro login debian -- bash -lc '
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
+export PATH="/root/.cargo/bin:$PATH"
 dpkg --configure -a >/dev/null 2>&1 || true
 apt-get -o Dpkg::Options::=--force-confold -f install -y
 apt-get update -y
 apt-get -o Dpkg::Options::=--force-confold install -y curl ca-certificates nodejs npm git
 if ! command -v kraken >/dev/null 2>&1; then
   curl --proto "=https" --tlsv1.2 -LsSf https://github.com/krakenfx/kraken-cli/releases/latest/download/kraken-cli-installer.sh | sh
+  export PATH="/root/.cargo/bin:$PATH"
 fi
 kraken status >/dev/null
 mkdir -p /root/emma/mobile-bridge
