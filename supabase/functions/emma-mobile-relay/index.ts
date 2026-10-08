@@ -8,7 +8,7 @@ const headers={"Content-Type":"application/json","Access-Control-Allow-Origin":"
 const out=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers});
 async function sha256(value:string){const bytes=new TextEncoder().encode(value);const hash=await crypto.subtle.digest("SHA-256",bytes);return [...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,"0")).join("")}
 function token(){const b=new Uint8Array(32);crypto.getRandomValues(b);return [...b].map(x=>x.toString(16).padStart(2,"0")).join("")}
-async function deviceFor(req:Request){const raw=req.headers.get("x-emma-device-token")||"";if(raw.length<32)return null;const hash=await sha256(raw);const {data,error}=await db.from("emma_mobile_devices").select("id,user_id,device_key,device_name,platform,app_version,capabilities,status,last_seen_at").eq("device_token_hash",hash).eq("status","online").maybeSingle();if(error||!data)return null;return {...data,tokenHash:hash}}
+async function deviceFor(req:Request, requireOnline=true){const raw=req.headers.get("x-emma-device-token")||"";if(raw.length<32)return null;const hash=await sha256(raw);let q=db.from("emma_mobile_devices").select("id,user_id,device_key,device_name,platform,app_version,capabilities,status,last_seen_at").eq("device_token_hash",hash);if(requireOnline)q=q.eq("status","online");const {data,error}=await q.maybeSingle();if(error||!data)return null;return {...data,tokenHash:hash}}
 Deno.serve(async req=>{
  if(req.method==="OPTIONS")return new Response("ok",{status:204,headers});
  if(req.method!=="POST")return out({error:"METHOD_NOT_ALLOWED"},405);
@@ -29,7 +29,7 @@ Deno.serve(async req=>{
   if(ce)return out({error:"PAIRING_CONSUME_FAILED"},500);
   return out({ok:true,version:VERSION,device,device_token:deviceToken});
  }
- const device=await deviceFor(req);if(!device)return out({error:"DEVICE_AUTH_REQUIRED"},401);
+ const opRequiresOnline=new Set(["poll","complete"]);const device=await deviceFor(req,!["heartbeat","status"].includes(op));if(!device)return out({error:"DEVICE_AUTH_REQUIRED"},401);
  if(op==="heartbeat"){
   const {data,error}=await db.from("emma_mobile_devices").update({status:"online",last_seen_at:new Date().toISOString(),updated_at:new Date().toISOString(),device_name:String(body.device_name||device.device_name).slice(0,120),app_version:String(body.app_version||device.app_version).slice(0,80),capabilities:Array.isArray(body.capabilities)?body.capabilities.slice(0,30):device.capabilities}).eq("id",device.id).select("id,device_key,device_name,platform,app_version,capabilities,status,last_seen_at").single();
   if(error)return out({error:"HEARTBEAT_FAILED",detail:error.message},500);return out({ok:true,version:VERSION,device:data});
