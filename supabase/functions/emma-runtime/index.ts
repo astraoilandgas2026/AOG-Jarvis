@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 
-const VERSION="emma-runtime-1.1.0";
+const VERSION="emma-runtime-1.2.0";
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{"Content-Type":"application/json"}});
 const serviceKey=()=>Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
 
