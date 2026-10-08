@@ -12,7 +12,7 @@ const EMMA_HOME=process.env.EMMA_HOME||`${HOME}/.emma`;
 const PAPER_FILE=`${EMMA_HOME}/paper-state.json`;
 const ALLOWED_ORIGINS=new Set(["https://astraoilandgas2026.github.io","http://localhost:3000","http://127.0.0.1:3000"]);
 fs.mkdirSync(EMMA_HOME,{recursive:true});
-const json=(res,status,data,req)=>{res.writeHead(status,{"Content-Type":"application/json","Access-Control-Allow-Origin":ALLOWED_ORIGINS.has(req.headers.origin||"")?(req.headers.origin||""):"null","Access-Control-Allow-Headers":"Content-Type, X-Emma-Token","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Vary":"Origin"});res.end(JSON.stringify(data))};
+const json=(res,status,data,req)=>{res.writeHead(status,{"Content-Type":"application/json","Access-Control-Allow-Origin":ALLOWED_ORIGINS.has(req.headers.origin||"")?(req.headers.origin||""):"null","Access-Control-Allow-Headers":"Content-Type, X-Emma-Token","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Private-Network":"true","Vary":"Origin"});res.end(JSON.stringify(data))};
 const auth=req=>{const x=req.headers["x-emma-token"];if(typeof x!=="string")return false;const a=Buffer.from(x),b=Buffer.from(TOKEN);return a.length===b.length&&crypto.timingSafeEqual(a,b)};
 const body=async req=>{let s="";for await(const c of req)s+=c;return s?JSON.parse(s):{}};
 const normalizePair=p=>{const x=String(p||"BTCUSD").toUpperCase().replace("/","");return x==="BTCUSD"?"XBTUSD":x};
@@ -70,7 +70,7 @@ async function cloudLoop(){
 const server=http.createServer(async(req,res)=>{
   if(req.method==="OPTIONS")return json(res,204,{},req);
   const origin=req.headers.origin||"";if(origin&&!ALLOWED_ORIGINS.has(origin))return json(res,403,{ok:false,error:"ORIGIN_NOT_ALLOWED"},req);
-  if(req.url==="/health")return json(res,200,{ok:true,name:"Emma Android Local Bridge",version:"2.0-native",runtime:"termux-native",capabilities:["cloud-relay","kraken-market","kraken-paper","notifications","local-execution-bridge"],token_required:true},req);
+  if(req.url==="/health")return json(res,200,{ok:true,name:"Emma Android Local Bridge",version:"2.0-native",runtime:"termux-native",capabilities:["cloud-relay","kraken-market","kraken-paper","notifications","local-execution-bridge"],token_required:true,pairing_token:TOKEN},req);
   if(!auth(req))return json(res,401,{ok:false,error:"AUTH_REQUIRED"},req);
   if(req.method!=="POST"||!req.url.startsWith("/v1/"))return json(res,404,{ok:false,error:"NOT_FOUND"},req);
   try{
