@@ -10,7 +10,7 @@ const DEVICE_KEY=String(process.env.EMMA_DEVICE_KEY||"");
 const HOME=process.env.HOME||process.cwd();
 const EMMA_HOME=process.env.EMMA_HOME||`${HOME}/.emma`;
 const PAPER_FILE=`${EMMA_HOME}/paper-state.json`;
-const ALLOWED_ORIGINS=new Set(["https://astraoilandgas2026.github.io","http://localhost:3000","http://127.0.0.1:3000"]);
+const ALLOWED_ORIGINS=new Set(["https://astraoilandgas2026.github.io","http://localhost:3000","http://127.0.0.1:3000","http://localhost:5500","http://127.0.0.1:5500"]);
 fs.mkdirSync(EMMA_HOME,{recursive:true});
 const json=(res,status,data,req)=>{res.writeHead(status,{"Content-Type":"application/json","Access-Control-Allow-Origin":ALLOWED_ORIGINS.has(req.headers.origin||"")?(req.headers.origin||""):"null","Access-Control-Allow-Headers":"Content-Type, X-Emma-Token","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Private-Network":"true","Vary":"Origin"});res.end(JSON.stringify(data))};
 const auth=req=>{const x=req.headers["x-emma-token"];if(typeof x!=="string")return false;const a=Buffer.from(x),b=Buffer.from(TOKEN);return a.length===b.length&&crypto.timingSafeEqual(a,b)};
