@@ -348,5 +348,5 @@ try{ mobileBridge=createMobileBridge({supabase,onStatus:state=>{ if(state.connec
  return{ok:true,received:true,task_type:task.task_type}
 }}); }catch(error){ console.warn("Emma Mobile Bridge:",error); }
 setTimeout(()=>{invoke("jarvis-voice",{setup_voice:true}).catch(()=>{})},0);
-if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=27",{updateViaCache:"none"}).catch(()=>{});
+if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=29",{updateViaCache:"none"}).catch(()=>{});
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;install.classList.remove("hidden")});install.onclick=async()=>{if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;install.classList.add("hidden")};
