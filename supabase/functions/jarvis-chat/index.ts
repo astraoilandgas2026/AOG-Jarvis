@@ -70,9 +70,9 @@ async function loadEmmaCoreContext(db:any,userId:string,message:string){
   const tokens=[...new Set((message.toLowerCase().match(/[a-záéíóúñ0-9]{3,}/gi)||[]).filter(x=>!["que","como","para","con","los","las","del","una","por","qué","quiero","tengo","este","esta","esto","desde","ahora"].includes(x)))].slice(0,8);
   const graphOr=tokens.map(t=>"search_text.ilike.%"+t+"%,label.ilike.%"+t+"%").join(",");
   const [global,graph,facts]=await Promise.all([
-    db.from("jarvis_global_context").select("context_key,content,importance,updated_at").eq("active",true).order("importance",{ascending:false}).order("updated_at",{ascending:false}).limit(8),
-    graphOr?db.from("emma_graph_nodes").select("node_key,entity_type,label,search_text,properties,updated_at").eq("active",true).or(graphOr).order("updated_at",{ascending:false}).limit(24):Promise.resolve({data:[]}),
-    db.from("emma_knowledge_facts").select("subject_node_key,predicate,object_text,fact_date,evidence_level,confidence,status,source_type,source_ref,updated_at").eq("user_id",userId).eq("status","active").order("updated_at",{ascending:false}).limit(40)
+    db.from("jarvis_global_context").select("context_key,content,importance,updated_at").eq("active",true).order("importance",{ascending:false}).order("updated_at",{ascending:false}).limit(5),
+    graphOr?db.from("emma_graph_nodes").select("node_key,entity_type,label,search_text,properties,updated_at").eq("active",true).or(graphOr).order("updated_at",{ascending:false}).limit(10):Promise.resolve({data:[]}),
+    db.from("emma_knowledge_facts").select("subject_node_key,predicate,object_text,fact_date,evidence_level,confidence,status,source_type,source_ref,updated_at").eq("user_id",userId).eq("status","active").order("updated_at",{ascending:false}).limit(15)
   ]);
   return {global_context:global.data||[],graph:(graph.data||[]).map((x:any)=>({node_key:x.node_key,entity_type:x.entity_type,label:x.label,properties:x.properties,updated_at:x.updated_at})),knowledge_facts:facts.data||[]};
 }
@@ -130,7 +130,7 @@ Deno.serve(async(req:Request)=>{
       const ageDays=Math.max(0,(now-new Date(m.updated_at||m.created_at).getTime())/86400000);
       const decay=1/(1+ageDays/30);
       return {...m,_score:matches*12+(Number(m.importance)||0)*decay};
-    }).sort((a:any,b:any)=>b._score-a._score).slice(0,6);
+    }).sort((a:any,b:any)=>b._score-a._score).slice(0,4);
     memories=ranked.map(({_score,...m}:any)=>`[${m.domain}/${m.memory_type}/${m.evidence_level??"unclassified"}] ${m.content}`).join("\n");
   }
   const system=`Eres Emma/Jarvis de Astra Oil & Gas. Preferencia permanente del usuario: respuestas MUY CORTAS, PRECISAS y ACCIONABLES. Evita contexto largo, introducciones, repeticiones y explicaciones innecesarias. Si pide ejecución, ejecuta todo lo disponible y reporta solo resultado/evidencia. Responde normalmente en español, directo, preciso y accionable. Tu personalidad es cálida, segura, inteligente y ligeramente juguetona; usa humor seco o un comentario simpático solo cuando encaje, nunca cuando reduzca claridad. No hagas discursos ni repitas lo obvio.
@@ -145,7 +145,7 @@ Memoria relevante disponible:
 ${memories||"(sin memoria dinámica registrada)"}
 
 Emma Global Core — primero usa esta capa persistente antes de depender de contexto externo:
-${JSON.stringify(coreContext).slice(0,14000)}
+${JSON.stringify(coreContext).slice(0,7000)}
 
 Contexto global/procurement proporcionado por el núcleo:
 ${suppliedContext||"(sin contexto adicional)"}
