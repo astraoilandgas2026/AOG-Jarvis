@@ -251,8 +251,8 @@ if(intent.tool==="kraken.status"){
 if(intent.tool==="kraken.paper"){
  if(!localBridge)throw new Error("LOCAL_BRIDGE_OFFLINE: inicia Emma Local Bridge en Samsung para Kraken.");
  const side=/\\b(sell|vende|vender)\\b/i.test(q)?"sell":"buy";
- const pair=(q.match(/\\b(BTC|ETH|SOL|XRP|ADA|DOGE|LINK|AVAX)\\/?(?:USD|USDT)\\b/i)?.[0]||"BTCUSD").replace("/","").toUpperCase();
- const qty=q.match(/(?:cantidad|qty|quantity)\\s*[:=]?\\s*(\\d+(?:\\.\\d+)?)/i)?.[1]||"0.001";
+ const pairMatch=q.match(/\b(BTC|ETH|SOL|XRP|ADA|DOGE|LINK|AVAX)\/?(?:USD|USDT)\b/i);const pair=(pairMatch&&pairMatch[0]?pairMatch[0]:"BTCUSD").replace("/","").toUpperCase();
+ const qtyMatch=q.match(/(?:cantidad|qty|quantity)\s*[:=]?\s*(\d+(?:\.\d+)?)/i);const qty=qtyMatch&&qtyMatch[1]?qtyMatch[1]:"0.001";
  if(window.confirm("Ejecutar PAPER en Kraken?\\n\\n"+side.toUpperCase()+" "+pair+" qty "+qty+"\\n\\nSin dinero real." )===false){addMessage("assistant","Kraken paper cancelado.");return}
  const data=await bridgeCommand(localBridge,"kraken/paper",{action:side,pair,volume:qty});
  result.textContent=JSON.stringify(data,null,2);
