@@ -103,7 +103,7 @@ Deno.serve(async(req:Request)=>{
  if(!tool)return json({error:"Tool required"},400,h);
  async function resolveSupplierIdsForQuery(text:string){
    const terms=searchPattern(text);
-   const patterns=terms.map(t=>"%"+t.replace(/[%_]/g,"\\ if(!tool)return json({error:"Tool required"},400,h);")+"%");
+    const patterns=terms.map(t=>"%"+t.replace(/[%_]/g,"\\$&")+"%");
    if(!patterns.length)return [];
    const supplierOr=patterns.map(p=>`legal_name.ilike.${p},trading_name.ilike.${p},tax_id.ilike.${p}`).join(",");
    const {data,error}=await db.from("suppliers").select("id").or(supplierOr).limit(20);
