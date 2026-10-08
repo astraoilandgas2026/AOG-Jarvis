@@ -119,7 +119,7 @@ async function invokeChat(q,context=null){
       const p=line.slice(5).trim();
       if(!p||p==="[DONE]")continue;
       const chunk=JSON.parse(p);
-      if(chunk.type==="delta"){
+      if(chunk.type==="fallback"&&chunk.provider)statusEl?.setAttribute("data-provider",chunk.provider);if(chunk.type==="delta"){
         answer+=chunk.text||"";
         bubble.textContent=answer;
         messages.scrollTop=messages.scrollHeight;
