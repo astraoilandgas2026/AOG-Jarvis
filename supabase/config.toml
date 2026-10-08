@@ -1,2 +1,3 @@
 [functions.jarvis-search-supplier]
 verify_jwt = true
+\n[functions.emma-mobile-bridge]\nverify_jwt = true\n
