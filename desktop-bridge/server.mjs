@@ -28,6 +28,7 @@ let context=null;
 let page=null;
 
 function corsOrigin(req){const origin=req.headers.origin||"";return ALLOWED_ORIGINS.has(origin)?origin:"null"}
+function originAllowed(req){const origin=req.headers.origin||"";return !origin||ALLOWED_ORIGINS.has(origin)}
 function json(res,status,data,req){
   const body=JSON.stringify(data);
   res.writeHead(status,{"Content-Type":"application/json","Access-Control-Allow-Origin":corsOrigin(req),"Access-Control-Allow-Credentials":"true","Access-Control-Allow-Headers":"Content-Type, X-Emma-Token","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Private-Network":"true","Vary":"Origin"});
@@ -92,7 +93,8 @@ async function backupStatus(){
 const server=http.createServer(async(req,res)=>{
   if(req.method==="OPTIONS")return json(res,204,{},req);
   try{
-    if(req.url==="/health")return json(res,200,{ok:true,name:"Emma Local Bridge",version:"1.4",capabilities:["browser","web-analysis","links","screenshot","persistent-session","multi-tab","wait","backup"],token_required:true,pairing_token:TOKEN},req);
+    if(!originAllowed(req))return json(res,403,{ok:false,error:"ORIGIN_NOT_ALLOWED"},req);
+    if(req.url==="/health")return json(res,200,{ok:true,name:"Emma Local Bridge",version:"1.5",capabilities:["browser","web-analysis","links","screenshot","persistent-session","multi-tab","wait","backup","binance-testnet","freqtrade","trading-lab"],token_required:true,pairing_token:TOKEN},req);
     if(!auth(req))return json(res,401,{ok:false,error:"AUTH_REQUIRED"},req);
     if(req.method!=="POST"||!req.url.startsWith("/v1/"))return json(res,404,{ok:false,error:"NOT_FOUND"},req);
     const command=req.url.slice(4),input=await body(req);
