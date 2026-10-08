@@ -32,7 +32,20 @@ if [ -f /root/emma/bridge.pid ]; then
   rm -f /root/emma/bridge.pid
 fi
 export EMMA_BRIDGE_TOKEN="$(cat /root/emma/bridge-token)"
-nohup node /root/emma/mobile-bridge/server.mjs >/root/emma/bridge.log 2>&1 &
+export EMMA_SUPABASE_URL="https://dhswxxathvzzlybxukat.supabase.co"
+if [ ! -f /root/emma/device-key ]; then
+  umask 077
+  cat /proc/sys/kernel/random/uuid > /root/emma/device-key
+fi
+export EMMA_DEVICE_KEY="$(cat /root/emma/device-key)"
+if [ ! -f /root/emma/cloud-token ]; then
+  echo "[Emma] Cloud pairing required."
+  read -r -p "Enter Emma pairing code: " EMMA_PAIRING_CODE
+  PAIR_JSON="$(curl -fsS -X POST "$EMMA_SUPABASE_URL/functions/v1/emma-mobile-relay" -H "Content-Type: application/json" --data "$(node -e 'console.log(JSON.stringify({op:"pair",pairing_code:process.env.EMMA_PAIRING_CODE,device_key:process.env.EMMA_DEVICE_KEY,device_name:"Emma Samsung",platform:"android-termux",app_version:"1.2-cloud-relay",capabilities:["cloud_relay","kraken-market","kraken-paper","notifications","local-execution-bridge"]}))')")"
+  node -e 'const d=JSON.parse(process.argv[1]); if(!d.device_token){console.error(JSON.stringify(d));process.exit(1)}; require("fs").writeFileSync("/root/emma/cloud-token",d.device_token,{mode:0o600}); console.log("[Emma] Cloud pairing OK")' "$PAIR_JSON"
+fi
+export EMMA_CLOUD_TOKEN="$(cat /root/emma/cloud-token)"
+nohup env EMMA_BRIDGE_TOKEN="$EMMA_BRIDGE_TOKEN" EMMA_SUPABASE_URL="$EMMA_SUPABASE_URL" EMMA_DEVICE_KEY="$EMMA_DEVICE_KEY" EMMA_CLOUD_TOKEN="$EMMA_CLOUD_TOKEN" node /root/emma/mobile-bridge/server.mjs >/root/emma/bridge.log 2>&1 &
 echo $! > /root/emma/bridge.pid
 sleep 1
 curl -fsS -H "X-Emma-Token: $EMMA_BRIDGE_TOKEN" http://127.0.0.1:43177/health
