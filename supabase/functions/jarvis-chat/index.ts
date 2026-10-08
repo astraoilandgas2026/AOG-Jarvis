@@ -158,25 +158,12 @@ ${suppliedContext||"(sin contexto adicional)"}
     if(!apiKey){failures.push({provider:provider.id,reason:"not_configured"});continue;}
     try{
       if(provider.id==="groq"){
-        const encoder=new TextEncoder();
-        const stream=new ReadableStream({
-          async start(controller){
-            try{
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"start"})}\n\n`));
-              const result=await callGroq(apiKey,messages,(chunk)=>controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"delta",text:chunk})}\n\n`)));
-              if(!result.text)throw providerError(502,"Empty provider response");
-              if(needsMemory)await saveMemory(db,userId,message);
-              await logInteraction(db,userId,"assistant",result.text,"raw",{session_id:sessionId,provider:provider.id,model:provider.model});
-              await logProvider(db,userId,provider.id,provider.model,"success",null,result.latency);
-              controller.enqueue(encoder.encode("data: [DONE]\\n\\n"));controller.close();
-            }catch(error){
-              const status=(error as any)?.status??502;
-              await logProvider(db,userId,provider.id,provider.model,"failed",String(status),null);
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:"error",message:error instanceof Error?error.message:"Provider error"})}\n\n`));controller.close();
-            }
-          }
-        });
-        return new Response(stream,{status:200,headers:{...headers,"Content-Type":"text/event-stream; charset=utf-8","Cache-Control":"no-cache, no-transform","X-Accel-Buffering":"no"}});
+        const result=await callGroq(apiKey,messages);
+        if(!result.text)throw providerError(502,"Empty provider response");
+        if(needsMemory)await saveMemory(db,userId,message);
+        await logInteraction(db,userId,"assistant",result.text,"raw",{session_id:sessionId,provider:provider.id,model:provider.model});
+        await logProvider(db,userId,provider.id,provider.model,"success",null,result.latency);
+        return new Response(JSON.stringify({ok:true,user_id:userId,provider:provider.id,model:provider.model,failover:failures.length>0,text:result.text}),{status:200,headers:{...headers,"Content-Type":"application/json"}});
       }
       const result=await callGemini(apiKey,messages);
       if(!result.text)throw providerError(502,"Empty provider response");
