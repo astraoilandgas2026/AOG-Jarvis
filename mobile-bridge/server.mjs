@@ -13,18 +13,18 @@ async function kraken(args){
   const cmd=String(args?.command||"status").trim();
   if(!/^[a-z0-9][a-z0-9 _./:-]*$/i.test(cmd))throw new Error("KRAKEN_COMMAND_INVALID");
   const parts=cmd.split(/\s+/).filter(Boolean);
-  const allowed=["status","ticker","orderbook","trades","ohlc","workspace","paper","futures"];
+  const allowed=["status","ticker","orderbook","trades","ohlc","workspace","paper"];
   if(!allowed.includes(parts[0]))throw new Error("KRAKEN_COMMAND_NOT_ALLOWED");
   const safeArgs=parts.slice(1);
-  if(safeArgs.some(x=>x.startsWith("--allow-dangerous")||x==="trade"||x==="funding"||x==="order"))throw new Error("KRAKEN_LIVE_OR_DANGEROUS_BLOCKED");
-  const {stdout,stderr}=await exec("kraken",[...safeArgs.length?parts:parts,"-o","json"],{timeout:20000,maxBuffer:2_000_000});
+  if(safeArgs.some(x=>x.startsWith("--allow-dangerous")||x==="trade"||x==="funding"||x==="order"||x==="futures"))throw new Error("KRAKEN_LIVE_OR_DANGEROUS_BLOCKED");
+  const {stdout,stderr}=await exec("kraken",[...parts,"-o","json"],{timeout:20000,maxBuffer:2_000_000});
   let data;try{data=JSON.parse(stdout)}catch{data={raw:stdout.trim()}};return{ok:true,mode:"paper-or-public",data,stderr:stderr?.trim()||null};
 }
 const server=http.createServer(async(req,res)=>{
   if(req.method==="OPTIONS")return json(res,204,{},req);
   const origin=req.headers.origin||"";
   if(origin&&!ALLOWED_ORIGINS.has(origin))return json(res,403,{ok:false,error:"ORIGIN_NOT_ALLOWED"},req);
-  if(req.url==="/health")return json(res,200,{ok:true,name:"Emma Android Local Bridge",version:"1.0-kraken",capabilities:["kraken-market","kraken-paper","notifications","local-execution-bridge"],token_required:true},req);
+  if(req.url==="/health")return json(res,200,{ok:true,name:"Emma Android Local Bridge",version:"1.1-kraken",capabilities:["kraken-market","kraken-paper","notifications","local-execution-bridge"],token_required:true},req);
   if(!auth(req))return json(res,401,{ok:false,error:"AUTH_REQUIRED"},req);
   if(req.method!=="POST"||!req.url.startsWith("/v1/"))return json(res,404,{ok:false,error:"NOT_FOUND"},req);
   try{
@@ -32,7 +32,7 @@ const server=http.createServer(async(req,res)=>{
     if(command==="kraken/status")return json(res,200,await kraken({command:"status"}),req);
     if(command==="kraken/ticker"){const pair=String(input.pair||"BTCUSD").toUpperCase();return json(res,200,await kraken({command:"ticker "+pair}),req)}
     if(command==="kraken/workspace/create"){const name=String(input.name||"emma-paper").replace(/[^a-zA-Z0-9_-]/g,"");const capital=Number(input.capital||10000);return json(res,200,await kraken({command:"workspace create "+name+" --capital "+capital+" --mode paper"}),req)}
-    if(command==="kraken/paper"){const action=String(input.action||"status");const pair=String(input.pair||"BTCUSD").toUpperCase();const volume=String(input.volume||"0.001");if(!["status","balance","orders","history"].includes(action)&&!["buy","sell"].includes(action))throw new Error("KRAKEN_PAPER_ACTION_INVALID");const cmd=["buy","sell"].includes(action)?`paper ${action} ${pair} ${volume}`:`paper ${action}`;return json(res,200,await kraken({command:cmd}),req)}
+    if(command==="kraken/paper"){const action=String(input.action||"status");const pair=String(input.pair||"BTCUSD").toUpperCase();const volume=String(input.volume||"0.001");if(!["status","balance","orders","history","buy","sell"].includes(action))throw new Error("KRAKEN_PAPER_ACTION_INVALID");const cmd=["buy","sell"].includes(action)?`paper ${action} ${pair} ${volume}`:`paper ${action}`;return json(res,200,await kraken({command:cmd}),req)}
     if(command==="kraken/command")return json(res,200,await kraken(input),req);
     return json(res,404,{ok:false,error:"UNKNOWN_COMMAND"},req);
   }catch(error){return json(res,500,{ok:false,error:String(error?.message||error)},req)}
