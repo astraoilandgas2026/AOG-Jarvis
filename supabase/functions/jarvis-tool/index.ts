@@ -157,6 +157,18 @@ Deno.serve(async(req:Request)=>{
    return json({...response,cache:"miss"},200,h);
  }
 
+ if(tool==="emma.mobile.task"){
+   const allowedTasks=new Set(["kraken_status","kraken_ticker","kraken_workspace_create","kraken_paper","notification"]);
+   const taskType=String(body.task_type||"");
+   if(!allowedTasks.has(taskType))return json({error:"Mobile task type not allowed"},400,h);
+   const payload=body.payload&&typeof body.payload==="object"?body.payload:{};
+   if(taskType==="kraken_paper"&&!["status","balance","orders","history","buy","sell"].includes(String(payload.action||"status")))return json({error:"Kraken paper action not allowed"},400,h);
+   const task={user_id:userData.user.id,device_id:body.device_id||null,task_type:taskType,payload,status:"queued"};
+   const {data,error}=await db.from("emma_mobile_tasks").insert(task).select("id,device_id,task_type,payload,status,created_at").single();
+   if(error)return json({error:"Mobile task enqueue failed",detail:error.message},500,h);
+   return json({ok:true,tool,data},200,h);
+ }
+
  if(tool==="memory.write"){
    if(q.length<2)return json({error:"Memory text required"},400,h);
    const memory={user_id:userData.user.id,domain:body.domain||"personal",memory_type:body.memory_type||"note",content:q.slice(0,1200),importance:Math.min(Math.max(Number(body.importance)||4,1),5),source:body.source||"conversation",evidence_level:body.evidence_level||"user_stated",active:true};
