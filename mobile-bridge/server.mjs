@@ -5,7 +5,7 @@ import { promisify } from "node:util";
 const exec=promisify(execFile);
 const PORT=Number(process.env.EMMA_BRIDGE_PORT||43177);
 const TOKEN=process.env.EMMA_BRIDGE_TOKEN||crypto.randomBytes(24).toString("hex");
-const CLOUD_URL=String(process.env.EMMA_SUPABASE_URL||"").replace(/\\/$/,"");
+const CLOUD_URL=String(process.env.EMMA_SUPABASE_URL||"").replace(/\/$/,"");
 const CLOUD_TOKEN=String(process.env.EMMA_CLOUD_TOKEN||"");
 const DEVICE_KEY=String(process.env.EMMA_DEVICE_KEY||"");
 const ALLOWED_ORIGINS=new Set(["https://astraoilandgas2026.github.io","http://localhost:3000","http://127.0.0.1:3000"]);
@@ -31,7 +31,7 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==="OPTIONS")return json(res,204,{},req);
   const origin=req.headers.origin||"";
   if(origin&&!ALLOWED_ORIGINS.has(origin))return json(res,403,{ok:false,error:"ORIGIN_NOT_ALLOWED"},req);
-  if(req.url==="/health")return json(res,200,{ok:true,name:"Emma Android Local Bridge",version:"1.1-kraken",capabilities:["kraken-market","kraken-paper","notifications","local-execution-bridge"],token_required:true},req);
+  if(req.url==="/health")return json(res,200,{ok:true,name:"Emma Android Local Bridge",version:"1.2-cloud-relay",capabilities:["cloud-relay","kraken-market","kraken-paper","notifications","local-execution-bridge"],token_required:true},req);
   if(!auth(req))return json(res,401,{ok:false,error:"AUTH_REQUIRED"},req);
   if(req.method!=="POST"||!req.url.startsWith("/v1/"))return json(res,404,{ok:false,error:"NOT_FOUND"},req);
   try{
