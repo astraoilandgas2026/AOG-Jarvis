@@ -41,6 +41,7 @@ export EMMA_DEVICE_KEY="$(cat /root/emma/device-key)"
 if [ ! -f /root/emma/cloud-token ]; then
   echo "[Emma] Cloud pairing required."
   read -r -p "Enter Emma pairing code: " EMMA_PAIRING_CODE
+  export EMMA_PAIRING_CODE
   PAIR_JSON="$(curl -fsS -X POST "$EMMA_SUPABASE_URL/functions/v1/emma-mobile-relay" -H "Content-Type: application/json" --data "$(node -e 'console.log(JSON.stringify({op:"pair",pairing_code:process.env.EMMA_PAIRING_CODE,device_key:process.env.EMMA_DEVICE_KEY,device_name:"Emma Samsung",platform:"android-termux",app_version:"1.2-cloud-relay",capabilities:["cloud_relay","kraken-market","kraken-paper","notifications","local-execution-bridge"]}))')")"
   node -e 'const d=JSON.parse(process.argv[1]); if(!d.device_token){console.error(JSON.stringify(d));process.exit(1)}; require("fs").writeFileSync("/root/emma/cloud-token",d.device_token,{mode:0o600}); console.log("[Emma] Cloud pairing OK")' "$PAIR_JSON"
 fi
