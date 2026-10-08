@@ -6,11 +6,14 @@ if ! proot-distro login debian -- true >/dev/null 2>&1; then
   proot-distro install debian
 fi
 
-echo "[Emma] Installing runtime and Kraken CLI inside Debian..."
+echo "[Emma] Repairing Debian package state and installing runtime..."
 proot-distro login debian -- bash -lc '
 set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
+dpkg --configure -a >/dev/null 2>&1 || true
+apt-get -o Dpkg::Options::=--force-confold -f install -y
 apt-get update -y
-apt-get install -y curl ca-certificates nodejs npm git
+apt-get -o Dpkg::Options::=--force-confold install -y curl ca-certificates nodejs npm git
 if ! command -v kraken >/dev/null 2>&1; then
   curl --proto "=https" --tlsv1.2 -LsSf https://github.com/krakenfx/kraken-cli/releases/latest/download/kraken-cli-installer.sh | sh
 fi
