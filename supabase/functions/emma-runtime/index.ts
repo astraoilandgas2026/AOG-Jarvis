@@ -54,6 +54,19 @@ async function runTrading(){
     signal:{direction,score:Number(score.toFixed(2)),last,ema20:fast,ema50:slow,momentum_pct:Number(momentum.toFixed(4)),action:score>=70&&direction!=="NEUTRAL"?"WATCH":score>=55&&direction!=="NEUTRAL"?"PAPER_ONLY":"NO_TRADE"}};
 }
 
+async function notifyMobile(admin:any,userId:string,workflow:string,result:any){
+  const {data:device}=await admin.from("emma_mobile_devices").select("id").eq("user_id",userId).eq("status","online").order("last_seen_at",{ascending:false}).limit(1).maybeSingle();
+  if(!device)return {queued:false,reason:"NO_ONLINE_DEVICE"};
+  let body="Revisión automática completada.";
+  if(workflow==="astra"){
+    const e=result?.evidence||[];body="Astra: "+e.map((x:any)=>String(x.source||"").replace("public.","")+": "+String(x.count??0)).join(" · ");
+  }else if(workflow==="trading"){
+    const s=result?.signal;body="BTCUSDT: "+(s?.direction||"NEUTRAL")+" · score "+String(s?.score??0)+" · "+String(s?.action||"NO_TRADE");
+  }
+  const {error}=await admin.from("emma_mobile_tasks").insert({user_id:userId,device_id:device.id,task_type:"notification",payload:{title:"Emma · "+workflow.toUpperCase(),body,workflow,generated_at:new Date().toISOString()},status:"queued",result:{},error:null});
+  if(error)return {queued:false,reason:error.message};
+  return {queued:true,device_id:device.id};
+}
 async function main(req:Request){
   const internalKey=req.headers.get("x-emma-scheduler-key")||"";
   const key=serviceKey();
@@ -77,8 +90,8 @@ async function main(req:Request){
       else if(workflow==="health")result={workflow:"health",runtime:VERSION,status:"healthy"};
       else result={workflow:"blocked",reason:"PROMPT_REQUIRES_INTERACTIVE_EMMA",execution:false};
       const status=workflow==="blocked"?"blocked":"verified";
-      await admin.from("emma_automation_runs").update({status,result,evidence:result.evidence||[],completed_at:new Date().toISOString()}).eq("id",runId);
-      results.push({automation_id:job.id,run_id:runId,status,workflow,result});
+      await admin.from("emma_automation_runs").update({status,result,evidence:result.evidence||[],completed_at:new Date().toISOString()}).eq("id",runId);\n      const notification=workflow==="blocked"?{queued:false,reason:"BLOCKED_WORKFLOW"}:await notifyMobile(admin,job.user_id,workflow,result);
+      results.push({automation_id:job.id,run_id:runId,status,workflow,result,notification});
     }catch(error){
       const errorRecord=error as {message?:unknown}; const message=error instanceof Error?error.message:(errorRecord.message?String(errorRecord.message):JSON.stringify(error));
       await admin.from("emma_automation_runs").update({status:"failed",error:message,completed_at:new Date().toISOString()}).eq("id",runId);
