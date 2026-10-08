@@ -134,8 +134,10 @@ async function invokeChat(q,context=null){
   const bubble=document.createElement("div");
   bubble.className="message assistant";
   messages.appendChild(bubble);
+  const streamDeadline=Date.now()+15000;
   for(;;){
-    const x=await reader.read();
+    if(Date.now()>streamDeadline){controller.abort();throw new Error("CHAT_TIMEOUT")}
+    const x=await Promise.race([reader.read(),new Promise((_,reject)=>setTimeout(()=>reject(new Error("CHAT_STREAM_TIMEOUT")),6000))]);
     if(x.done)break;
     buffer+=decoder.decode(x.value,{stream:true});
     const lines=buffer.split("\n");buffer=lines.pop()||"";
