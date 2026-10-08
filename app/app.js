@@ -109,11 +109,17 @@ async function invokeChat(q,context=null){
   await ensureAuth();
   const session=(await supabase.auth.getSession()).data.session;
   if(!session?.access_token)throw new Error("AUTH_SESSION");
-  const response=await fetch(`${CONFIG.supabaseUrl}/functions/v1/jarvis-chat`,{
-    method:"POST",
-    headers:{"Authorization":`Bearer ${session.access_token}`,"apikey":CONFIG.supabasePublishableKey,"Content-Type":"application/json"},
-    body:JSON.stringify({message:q,history:history.slice(-6),context,client_date:new Date().toLocaleDateString("en-CA")}),cache:"no-store"
-  }),12000,"CHAT_TIMEOUT");
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),15000);
+  let response;
+  try{
+    response=await fetch(`${CONFIG.supabaseUrl}/functions/v1/jarvis-chat`,{
+      method:"POST",
+      headers:{"Authorization":`Bearer ${session.access_token}`,"apikey":CONFIG.supabasePublishableKey,"Content-Type":"application/json"},
+      body:JSON.stringify({message:q,history:history.slice(-6),context,client_date:new Date().toLocaleDateString("en-CA")}),cache:"no-store",signal:controller.signal
+    });
+  }catch(error){throw new Error(error?.name==="AbortError"?"CHAT_TIMEOUT":(error?.message||"CHAT_NETWORK_ERROR"))}
+  finally{clearTimeout(timeout)}
   if(!response.ok)throw new Error((await response.text()).slice(0,800));
   const type=response.headers.get("content-type")||"";
   if(!type.includes("text/event-stream")){
