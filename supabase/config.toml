@@ -1,3 +1,11 @@
 [functions.jarvis-search-supplier]
 verify_jwt = true
 \n[functions.emma-mobile-bridge]\nverify_jwt = true\n
+[functions.emma-mobile-relay]
+verify_jwt = false
+
+[functions.emma-cloud-worker]
+verify_jwt = false
+
+[functions.emma-runtime]
+verify_jwt = false
