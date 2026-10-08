@@ -27,8 +27,8 @@ export function classifyIntent(text=""){
  if(/(?:estado|status|salud|health).*(?:emma|jarvis)|(?:emma|jarvis).*(?:estado|status|salud|health)/.test(q))return{type:"tool",module:"emma",tool:"emma.status"};
  if(/(?:calendario|calendar|agenda|evento|reunión|reunion|cita)/.test(q))return{type:"tool",module:"calendar",tool:q.includes("crea")||q.includes("agrega")||q.includes("programa")?"calendar.create":"calendar.read"};
  if(/gmail/.test(q)&&/(?:envía|envia|manda|mandar)/.test(q))return{type:"action",module:"gmail",tool:"gmail.send",requiresConfirmation:true};
- if(/gmail/.test(q)||/(?:correo|email)/.test(q)&&/(?:google|gmail)/.test(q))return{type:"tool",module:"gmail",tool:"gmail.read"};
- if(/(?:revisa|revisar|lee|leer|mis correos|bandeja|inbox|últimos correos|ultimos correos|correo recibido|hostinger)/.test(q))return{type:"tool",module:"personal",tool:"mail.read"};
+ if(/gmail/.test(q)&&/(?:correo|email|mail|bandeja|inbox|revisa|revisar|lee|leer)/.test(q))return{type:"tool",module:"gmail",tool:"gmail.read"};
+ if(/(?:correo|email|mail|mis correos|bandeja|inbox|últimos correos|ultimos correos|correo recibido|hostinger)/.test(q))return{type:"tool",module:"personal",tool:"mail.read"};
  if(/(?:envía|envia|manda|mandar)\s+(?:un\s+)?(?:correo|email|mail)/.test(q))return{type:"action",module:"personal",tool:"mail.send",requiresConfirmation:true};
  if(/documento|documentos|coa|sgs|iscc|tds|sds|ficha/.test(q))return{type:"tool",module:"astra",tool:"astra.documents"};
  if(/contacto|contactos|whatsapp|teléfono|telefono/.test(q))return{type:"tool",module:"astra",tool:"astra.contacts"};
