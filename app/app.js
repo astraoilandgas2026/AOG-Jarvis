@@ -245,7 +245,7 @@ if(intent.tool==="kraken.status"){
  const data=await bridgeCommand(localBridge,"kraken/status",{});
  result.textContent=JSON.stringify(data,null,2);
  const d=data?.data||data;
- const answer=d?.ok?"Kraken CLI conectado. Mercado público/paper disponible; no se usan claves.":"Kraken: "+(d?.error||"sin confirmación");
+ const answer=d?.ok?"Kraken conectado. Mercado público/paper disponible; no se usan claves.":"Kraken: "+(d?.error||"sin confirmación");
  addMessage("assistant",answer);speak(answer);return;
 }
 if(intent.tool==="kraken.paper"){
