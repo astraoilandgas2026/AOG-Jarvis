@@ -94,6 +94,8 @@ Deno.serve(async(req:Request)=>{
  const db=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_ANON_KEY")!,{global:{headers:{Authorization:auth}}});
  const {data:userData,error:authError}=await db.auth.getUser();
  if(authError||!userData.user)return json({error:"Invalid authentication"},401,h);
+ const {data:authorized,error:authzError}=await db.rpc("emma_is_authorized");
+ if(authzError||authorized!==true)return json({error:"Access denied"},403,h);
  let body:any;try{body=await req.json()}catch{return json({error:"Invalid JSON body"},400,h)}
  const tool=typeof body.tool==="string"?body.tool:"";
  const q=typeof body.q==="string"?body.q.trim():"";
