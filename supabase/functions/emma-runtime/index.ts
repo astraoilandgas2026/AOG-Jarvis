@@ -90,7 +90,8 @@ async function main(req:Request){
       else if(workflow==="health")result={workflow:"health",runtime:VERSION,status:"healthy"};
       else result={workflow:"blocked",reason:"PROMPT_REQUIRES_INTERACTIVE_EMMA",execution:false};
       const status=workflow==="blocked"?"blocked":"verified";
-      await admin.from("emma_automation_runs").update({status,result,evidence:result.evidence||[],completed_at:new Date().toISOString()}).eq("id",runId);\n      const notification=workflow==="blocked"?{queued:false,reason:"BLOCKED_WORKFLOW"}:await notifyMobile(admin,job.user_id,workflow,result);
+      await admin.from("emma_automation_runs").update({status,result,evidence:result.evidence||[],completed_at:new Date().toISOString()}).eq("id",runId);
+      const notification=workflow==="blocked"?{queued:false,reason:"BLOCKED_WORKFLOW"}:await notifyMobile(admin,job.user_id,workflow,result);
       results.push({automation_id:job.id,run_id:runId,status,workflow,result,notification});
     }catch(error){
       const errorRecord=error as {message?:unknown}; const message=error instanceof Error?error.message:(errorRecord.message?String(errorRecord.message):JSON.stringify(error));
