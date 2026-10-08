@@ -21,6 +21,7 @@ export const TOOL_REGISTRY=Object.freeze({
  "trading.research":{id:"trading.research",label:"Trading Research",module:"trading",permission:"read",functionName:null,description:"Consulta el registro de agentes y benchmarks de trading integrados."},
  "kraken.status":{id:"kraken.status",label:"Kraken Paper Status",module:"trading",permission:"read",functionName:null,description:"Consulta Kraken CLI en modo público/paper, sin claves ni fondos reales."},
  "kraken.paper":{id:"kraken.paper",label:"Kraken Paper Trading",module:"trading",permission:"write",functionName:null,description:"Ejecuta operaciones únicamente en el sandbox paper local de Kraken CLI; nunca live."},
+ "emma.mobile.task":{id:"emma.mobile.task",label:"Emma Mobile Task",module:"local",permission:"write",functionName:"jarvis-tool",description:"Encola una tarea allowlisted para el bridge Samsung de Emma; no permite shell arbitrario ni trading live."},
  "binance.status":{id:"binance.status",label:"Binance Connection",module:"trading",permission:"read",functionName:null,description:"Comprueba conexión Binance y, si las credenciales están configuradas, consulta la cuenta."},
  "binance.balance":{id:"binance.balance",label:"Binance Balance",module:"trading",permission:"read",functionName:null,description:"Consulta balances autenticados de Binance."},
  "binance.exchange-info":{id:"binance.exchange-info",label:"Binance Exchange Info",module:"trading",permission:"read",functionName:null,description:"Consulta reglas de símbolos de Binance."},
