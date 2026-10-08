@@ -2,6 +2,8 @@ export function classifyTradingIntent(text=""){
   const q=String(text).trim().toLowerCase();
   if(!/(trading|trade|daytrading|day trading|scalp|scalping|mercado|market|btc|bitcoin|eth|ethereum|polymarket|oportunidades|oportunidad|jesse|freqtrade|darwinia|money sharks|openbook|freak trades|binance|saldo|balance|cuenta|exchange)/i.test(q))return null;
   if(/(?:mata|kill|emergency|detén|deten|apaga|stop).*(?:trading|bot|operación|operacion)/i.test(q))return {type:"tool",tool:"trading.kill"};
+  if(/(?:kraken).*(?:estado|status|salud|health|conect|ticker|mercado|market)/i.test(q))return {type:"tool",tool:"kraken.status"};
+  if(/(?:kraken).*(?:compra|comprar|buy|vende|vender|sell|paper|simulad|demo|sin dinero)/i.test(q))return {type:"tool",tool:"kraken.paper"};
   if(/(?:binance|saldo|balance|cuenta).*(?:binance|trading|exchange)?/i.test(q)&&/(?:estado|status|salud|health|conect|saldo|balance|cuenta)/i.test(q))return {type:"tool",tool:"binance.status"};
   if(/(?:freqtrade|motor de trading|motor trading|engine).*(?:estado|status|salud|health|conect|balance|saldo)?/i.test(q))return {type:"tool",tool:"freqtrade.status"};
   if(/(?:estado|status|salud|health).*(?:trading|bot|trading lab)/i.test(q))return {type:"tool",tool:"trading.status"};
