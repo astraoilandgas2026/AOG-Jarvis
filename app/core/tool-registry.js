@@ -33,7 +33,6 @@ export const TOOL_REGISTRY=Object.freeze({
  "emma.entity.resolve":{id:"emma.entity.resolve",label:"Resolver entidad",module:"emma",permission:"read",functionName:"jarvis-tool",description:"Resuelve nombres, alias y entidades canónicas sin duplicarlas."},
  "emma.entity.seed":{id:"emma.entity.seed",label:"Sincronizar alias",module:"emma",permission:"write",functionName:"jarvis-tool",description:"Sincroniza alias canónicos desde el grafo persistente."},
  "emma.core":{id:"emma.core",label:"Emma Global Core",module:"emma",permission:"read",functionName:"jarvis-tool",description:"Consulta primero el núcleo persistente: grafo, hechos, investigación, memoria, tareas y automatizaciones."},
- "emma.status":{id:"emma.status",label:"Estado de Emma",module:"emma",permission:"read",functionName:null,description:"Diagnóstico local de adapters, navegador, router y capacidades disponibles."},
  "execution.plan":{id:"execution.plan",label:"Planificador de ejecución",module:"execution",permission:"read",functionName:null,description:"Construye planes determinísticos de ejecución y evita llamadas innecesarias."},
  "execution.orchestrator":{id:"execution.orchestrator",label:"Orquestador de ejecución",module:"execution",permission:"read",functionName:null,description:"Coordina pasos, permisos, confirmaciones y evidencia de ejecución."},
  "automation.plan":{id:"automation.plan",label:"Planificador de recurrencia",module:"automation",permission:"read",functionName:null,description:"Detecta recurrencias diarias, semanales y mensuales sin LLM."},
