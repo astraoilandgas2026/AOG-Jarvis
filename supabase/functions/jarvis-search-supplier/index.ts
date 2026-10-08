@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 const allowedOrigins = new Set([
   "https://astraoilandgas2026.github.io",
   "http://localhost:3000",
-  "http://localhost:5500"
+  "http://localhost:5500","http://127.0.0.1:5500"
 ]);
 
 function corsHeaders(req: Request) {
@@ -50,6 +50,9 @@ Deno.serve(async (req: Request) => {
       { status: 401, headers: { ...headers, "Content-Type": "application/json" } }
     );
   }
+
+  const {data:authorized,error:authorizationError}=await db.rpc("emma_is_authorized");
+  if(authorizationError||authorized!==true) return new Response(JSON.stringify({error:"Forbidden"}),{status:403,headers:{...h,"Content-Type":"application/json"}});
 
   let body: { q?: string; limit?: number };
   try {
