@@ -91,7 +91,7 @@ function executionRegistry(){return Object.fromEntries(Object.entries(TOOL_REGIS
 async function orchestrateQuery(q){
  const lower=q.toLowerCase();
  const kind=/correo|email|gmail/.test(lower)?"email":/calendario|reunión|reunion|agenda/.test(lower)?"calendar":/github|código|codigo|repo/.test(lower)?"project":/documento|coa|sds|iscc|ficha/.test(lower)?"documents":"supplier";
- const intentMap={supplier:["astra.intelligence","document.intelligence","procurement.intelligence"],email:["gmail.read"],calendar:["calendar.read"],project:["github.read"],documents:["astra.documents","document.intelligence","procurement.intelligence"]};
+ const intentMap={supplier:["astra.intelligence","document.intelligence","procurement.intelligence"],email:[lower.includes("gmail")?"gmail.read":"mail.read"],calendar:["calendar.read"],project:["github.read"],documents:["astra.documents","document.intelligence","procurement.intelligence"]};
  const planned=rankTools(intentMap[kind].map(id=>getTool(id)).filter(Boolean));
  const runtime=buildEmmaRuntime(q,{externalData:true,parallelizable:true});
  const ctx=planExecution({query:q,tools:planned.map(t=>t.id),registry:executionRegistry(),route:runtime.route,budget:runtime.budget});
