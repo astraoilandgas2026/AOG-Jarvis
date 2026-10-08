@@ -63,6 +63,23 @@ async function ensureAuth(){
   throw new Error("AUTH: "+(error?.message||"No se pudo autenticar Emma."));
  }
 }
+async function ensureDefaultAutomations(session){
+ try{
+  if(!session?.access_token)return;
+  const listed=await supabase.functions.invoke("jarvis-tool",{body:{tool:"automation.list",limit:20}});
+  if(listed.error)return;
+  const rows=listed.data?.data||[];
+  const defaults=[
+   {name:"Emma · Briefing Astra diario",prompt:"Analiza prioridades de Astra, proveedores, ofertas, DD y follow-ups abiertos y entrega un briefing corto con los 3 asuntos más importantes.",cadence:"daily",cron_expression:"0 12 * * *"},
+   {name:"Emma · Monitor de mercado diario",prompt:"Analiza el mercado BTCUSDT en modo research, sin ejecutar operaciones, y reporta solo señales relevantes, riesgo y acción sugerida.",cadence:"daily",cron_expression:"0 13 * * *"},
+   {name:"Emma · Follow-ups Astra semanal",prompt:"Revisa follow-ups abiertos de Astra y detecta los que requieren acción, riesgo o contacto prioritario.",cadence:"weekly",cron_expression:"0 12 * * 1"}
+  ];
+  for(const item of defaults){
+   if(rows.some(r=>r.name===item.name||r.prompt===item.prompt))continue;
+   await supabase.functions.invoke("jarvis-tool",{body:{tool:"automation.save",q:item.prompt,name:item.name,cadence:item.cadence,cron_expression:item.cron_expression}});
+  }
+ }catch(error){console.warn("Emma default automations:",error)}
+}
 async function invoke(name,body){await ensureAuth();const {data,error}=await supabase.functions.invoke(name,{body});if(!error)return data;let detail="";try{if(error.context){const response=error.context instanceof Response?error.context:null;if(response){const clone=response.clone();try{const payload=await clone.json();detail=payload?.error||payload?.message||JSON.stringify(payload)}catch{detail=await response.text()}}}}catch{}throw new Error((detail||error.message||"Edge Function error").slice(0,800))}
 async function invokeContext(q){if(isOffline()){const snap=await loadSnapshot();if(snap?.data)return{data:snap.data,offline:true,saved_at:snap.saved_at};throw new Error("OFFLINE_NO_SNAPSHOT")}const data=await invokeTool("emma.core",{q,limit:8});await saveSnapshot(data?.data||data);return data}
 async function getGlobalContext(q){try{return await invokeContext(q)}catch{return null}}
@@ -312,8 +329,16 @@ const needsCoreRoundTrip=Boolean(runtime.intent?.type==="research"||runtime.inte
 logout.onclick=()=>supabase.auth.signOut();$("#execute").onclick=()=>{primeAudio();execute(command.value)};$("#voice").onclick=()=>{primeAudio();voice?.start()};command.addEventListener("keydown",e=>{if(e.key==="Enter")execute(command.value)});
 supabase.auth.onAuthStateChange((_event,session)=>renderSession(session));
 const {data:{session}}=await supabase.auth.getSession();
-if(session)renderSession(session);else{setStatus("CONECTANDO EMMA");try{await ensureAuth()}catch(error){setStatus("CONFIGURACIÓN DE ACCESO PENDIENTE");console.error("Anonymous auth unavailable",error)}}
-try{ mobileBridge=createMobileBridge({supabase,onStatus:state=>{ if(state.connected) setStatus("EMMA LISTA · SAMSUNG CONECTADO"); },onTask:async task=>({ok:true,received:true,task_type:task.task_type})}); }catch(error){ console.warn("Emma Mobile Bridge:",error); }
+if(session){renderSession(session);await ensureDefaultAutomations(session)}else{setStatus("CONECTANDO EMMA");try{const ensured=await ensureAuth();await ensureDefaultAutomations(ensured)}catch(error){setStatus("CONFIGURACIÓN DE ACCESO PENDIENTE");console.error("Anonymous auth unavailable",error)}}
+try{ mobileBridge=createMobileBridge({supabase,onStatus:state=>{ if(state.connected) setStatus("EMMA LISTA · SAMSUNG CONECTADO"); },onTask:async task=>{
+ if(task?.task_type==="notification"&&task.payload){
+  const title=String(task.payload.title||"Emma").slice(0,120),body=String(task.payload.body||"").slice(0,500);
+  if("Notification"in window&&Notification.permission==="granted"){new Notification(title,{body,icon:"./icon.svg",tag:"emma-"+task.id});return{ok:true,delivered:true,channel:"browser_notification"}}
+  addMessage("assistant",(title+(body?"\n"+body:"")).trim());
+  return{ok:true,delivered:true,channel:"emma_chat"}
+ }
+ return{ok:true,received:true,task_type:task.task_type}
+}}); }catch(error){ console.warn("Emma Mobile Bridge:",error); }
 setTimeout(()=>{invoke("jarvis-voice",{setup_voice:true}).catch(()=>{})},0);
 if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=27",{updateViaCache:"none"}).catch(()=>{});
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;install.classList.remove("hidden")});install.onclick=async()=>{if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;install.classList.add("hidden")};
