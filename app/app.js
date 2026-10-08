@@ -158,8 +158,11 @@ async function handleOperationalCommand(q){
 
 function fastReply(q){
   const exact=q.match(/^responde solamente:\s*(.+)$/i);if(exact)return exact[1].trim();
-  if(/^(hola|holi|hey|hello|buenas)([!.?,¿¡\s]*(emma)?[!.?,¿¡\s]*)?(cómo|como) (estás|estas)[?!.\s]*$/i.test(q))return "Bien, Leíto. Aquí contigo. ¿Qué hacemos?";
+  if(/^(hola|holi|hey|hello|buenas)([!.?,¿¡\s]*(emma)?[!.?,¿¡\s]*)?(cómo|como) (estás|estas)[?!.\s]*$/i.test(q)||/^(cómo|como) (estás|estas)[?!.\s]*$/i.test(q))return "Bien, Leíto. Aquí contigo. ¿Qué hacemos?";
   if(/^(hola|holi|hey|hello|buenas)[!.?,\s]*$/i.test(q))return "Hola, Leíto. Aquí estoy.";
+  if(/^(qué|que) (hacemos|hago) (hoy|ahora)[?!.\s]*$/i.test(q))return "Estoy lista. Podemos ir directo a Astra, revisar pendientes, proveedores o trading. Dime qué prioridad tomamos.";
+  if(/^(qué|que) (tienes|hay) para hoy[?!.\s]*$/i.test(q))return "Tengo tres frentes: Astra, pendientes y análisis. Si quieres, arrancamos por lo más urgente.";
+  if(/^(estás|estas) ahí[?!.\s]*$/i.test(q))return "Sí. Aquí estoy y escuchándote.";
   return null;
 }
 async function execute(text){primeAudio();const q=text.trim();if(!q)return;command.value="";addMessage("user",q);if(await handleOperationalCommand(q)){speak("Listo.");return}const quick=fastReply(q);if(quick){addMessage("assistant",quick);speak(quick);return}orb.setState("thinking");try{const explicitMemory=/(?:recuerda|acuérdate|acuerdate|anota|apunta|guarda|memoriza|no olvides)/i.test(q);const explicitTask=/(?:recuérdame|recuerdame|recordatorio|alarma|pon una alarma|anota como pendiente|apunta como pendiente|agrega una tarea|añade una tarea)/i.test(q);const explicitTaskList=/(?:mis tareas|tareas pendientes|mis pendientes|qué tengo pendiente|que tengo pendiente|recordatorios pendientes)/i.test(q);const runtime=buildEmmaRuntime(q,{requiresEvidence:/verifica|evidencia|fuente|dd|due diligence|riesgo|iscc|ffa|acidez|capacidad|exportación|exportacion/i.test(q),externalData:/investiga|internet|web|fuentes/i.test(q),parallelizable:/\b(5|varios|varias|múltiples|multiples|compara|cruza)\b/i.test(q)});
