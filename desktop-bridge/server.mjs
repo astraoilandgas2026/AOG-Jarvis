@@ -13,7 +13,7 @@ const PORT=Number(process.env.EMMA_BRIDGE_PORT||43177);
 const TOKEN=process.env.EMMA_BRIDGE_TOKEN||crypto.randomBytes(24).toString("hex");
 const PROFILE_DIR=process.env.EMMA_BROWSER_PROFILE||path.join(os.homedir(),".emma","browser-profile");
 const BACKUP_DIR=path.join(os.homedir(),".emma","backups");
-const ALLOWED_ORIGINS=new Set(["https://astraoilandgas2026.github.io","http://localhost:3000","http://127.0.0.1:3000"]);
+const ALLOWED_ORIGINS=new Set(["https://astraoilandgas2026.github.io","http://localhost:3000","http://127.0.0.1:3000","http://localhost:5500","http://127.0.0.1:5500"]);
 const BACKUP_FILES=[
   "app/app.js","app/config.js","app/index.html","app/styles.css",
   "app/modules/orb.js","app/modules/orb-personality.js","app/modules/emma-personality.js",
