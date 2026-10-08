@@ -22,6 +22,11 @@ export async function freqtradeStatus(env=process.env){
 export async function freqtradeRequest(action="status",payload={},env=process.env){
   if(!base(env))return {ok:false,error:"FREQTRADE_NOT_CONFIGURED",configured:false};
   if(action==="ping")return request("/api/v1/ping",{},env);
+  if(action==="start"){
+    if(String(env.FREQTRADE_TRADING_ENABLED||"false")!=="true")return {ok:false,error:"FREQTRADE_TRADING_DISABLED"};
+    if(String(env.TRADING_MODE||"paper")!=="live")return {ok:false,error:"TRADING_MODE_NOT_LIVE"};
+    if(String(env.LIVE_TRADING_ENABLED||"false")!=="true")return {ok:false,error:"LIVE_TRADING_DISABLED"};
+  }
   const t=await token(env); if(!t.ok)return t;
   const routes={status:{method:"GET",path:"/api/v1/status"},balance:{method:"GET",path:"/api/v1/balance"},profit:{method:"GET",path:"/api/v1/profit"},whitelist:{method:"GET",path:"/api/v1/whitelist"},start:{method:"POST",path:"/api/v1/start"},stop:{method:"POST",path:"/api/v1/stop"},pause:{method:"POST",path:"/api/v1/pause"}};
   const route=routes[action]; if(!route)return {ok:false,error:"FREQTRADE_ACTION_UNSUPPORTED",action};
