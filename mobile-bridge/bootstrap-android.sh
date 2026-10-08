@@ -36,47 +36,45 @@ fi
 
 EMMA_CLOUD_TOKEN="$(cat "$EMMA_HOME/cloud-token")"
 
-echo "[Emma] Repairing Debian package state and installing runtime..."
-proot-distro login debian -- bash -lc '
-set -euo pipefail
+echo "[Emma] Preparing Debian runtime..."
+
+proot-distro login debian -- bash -lc 'set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 export PATH="/root/.cargo/bin:$PATH"
 dpkg --configure -a >/dev/null 2>&1 || true
-apt-get -o Dpkg::Options::=--force-confold -f install -y
-apt-get update -y
-apt-get -o Dpkg::Options::=--force-confold install -y curl ca-certificates nodejs npm git
+apt-get -o Dpkg::Options::=--force-confold -f install -y >/dev/null 2>&1 || true
+apt-get update -y >/dev/null 2>&1
+apt-get -o Dpkg::Options::=--force-confold install -y curl ca-certificates nodejs npm git >/dev/null 2>&1
 if ! command -v kraken >/dev/null 2>&1; then
   curl --proto "=https" --tlsv1.2 -LsSf https://github.com/krakenfx/kraken-cli/releases/latest/download/kraken-cli-installer.sh | sh
   export PATH="/root/.cargo/bin:$PATH"
 fi
-kraken status >/dev/null
+kraken status >/dev/null 2>&1
 mkdir -p /root/emma/mobile-bridge
 curl --proto "=https" --tlsv1.2 -fsSL https://raw.githubusercontent.com/astraoilandgas2026/AOG-Jarvis/main/mobile-bridge/server.mjs -o /root/emma/mobile-bridge/server.mjs
 if [ ! -f /root/emma/bridge-token ]; then
   umask 077
   head -c 32 /dev/urandom | od -An -tx1 | tr -d " \\n" > /root/emma/bridge-token
 fi
-' 
-proot-distro login debian --detach -- env EMMA_DEVICE_KEY="$DEVICE_KEY" EMMA_CLOUD_TOKEN="$EMMA_CLOUD_TOKEN" bash -lc '
+' >/dev/null
+
+EMMA_CLOUD_TOKEN="$(cat "$EMMA_HOME/cloud-token")"
+BRIDGE_TOKEN="$(cat "$EMMA_HOME/bridge-token" 2>/dev/null || proot-distro login debian -- cat /root/emma/bridge-token)"
+
+pkill -f "proot-distro login debian" >/dev/null 2>&1 || true
+nohup proot-distro login debian -- env EMMA_DEVICE_KEY="$DEVICE_KEY" EMMA_CLOUD_TOKEN="$EMMA_CLOUD_TOKEN" EMMA_SUPABASE_URL="https://dhswxxathvzzlybxukat.supabase.co" EMMA_BRIDGE_TOKEN="$BRIDGE_TOKEN" bash -lc '
 set -euo pipefail
-export EMMA_BRIDGE_TOKEN="$(cat /root/emma/bridge-token)"
-export EMMA_SUPABASE_URL="https://dhswxxathvzzlybxukat.supabase.co"
 printf "%s" "$EMMA_DEVICE_KEY" > /root/emma/device-key
 printf "%s" "$EMMA_CLOUD_TOKEN" > /root/emma/cloud-token
-chmod 600 /root/emma/device-key /root/emma/cloud-token
+printf "%s" "$EMMA_BRIDGE_TOKEN" > /root/emma/bridge-token
+chmod 600 /root/emma/device-key /root/emma/cloud-token /root/emma/bridge-token
 : > /root/emma/bridge.log
 node /root/emma/mobile-bridge/server.mjs >>/root/emma/bridge.log 2>&1
-'
-sleep 2
-BRIDGE_TOKEN="$(proot-distro login debian -- cat /root/emma/bridge-token)"
-if curl -fsS -H "X-Emma-Token: $BRIDGE_TOKEN" http://127.0.0.1:43177/health >/dev/null; then
-  echo '{"ok":true,"name":"Emma Android Local Bridge","cloud_relay":true}'
-  echo "[Emma] BRIDGE ONLINE"
-  echo "[Emma] Cloud relay configured"
-  echo "[Emma] Token stored locally at /root/emma/bridge-token"
-else
-  echo "[Emma] BRIDGE FAILED TO START"
-  echo "[Emma] bridge.log:"
-  proot-distro login debian -- cat /root/emma/bridge.log
-  exit 1
-fi
+' >"$EMMA_HOME/proot.log" 2>&1 </dev/null &
+echo $! > "$EMMA_HOME/proot.pid"
+
+sleep 4
+node -e 'fetch("http://127.0.0.1:43177/health",{headers:{"X-Emma-Token":process.argv[1]}}).then(async r=>{if(!r.ok){console.error(await r.text());process.exit(1)}console.log("[Emma] BRIDGE ONLINE")}).catch(e=>{console.error(e.message);process.exit(1)})' "$BRIDGE_TOKEN"
+
+echo "[Emma] Cloud relay configured"
+echo "[Emma] PRoot process kept alive in background"
