@@ -37,7 +37,7 @@ let localBridge=null;
 let mobileBridge=null;
 async function refreshLocalBridge(){try{const b=await discoverLocalBridge();localBridge=b;orb.setConnection?.(Boolean(b));registerAdapter({id:"local-computer",name:"Emma Local Computer",kind:"desktop",status:b?"connected":"offline",capabilities:["browser","files","apps","screen"],connect:async()=>b});return b}catch{return null}}
 refreshLocalBridge();
-setInterval(()=>{if(!localBridge)refreshLocalBridge()},5000);
+setInterval(()=>{refreshLocalBridge()},5000);
 voice=createVoice({orb,onTranscript:t=>{const normalized=normalizeVoiceText(t);command.value=normalized;execute(normalized)},onError:e=>setStatus(e)});
 let deferredInstall=null,history=[];
 function setStatus(text){$("#orb-status").textContent=text}
