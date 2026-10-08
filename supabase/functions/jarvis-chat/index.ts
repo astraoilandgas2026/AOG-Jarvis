@@ -84,6 +84,8 @@ Deno.serve(async(req:Request)=>{
   const authorization=req.headers.get("Authorization");
   if(!authorization?.startsWith("Bearer "))return new Response(JSON.stringify({error:"Authentication required"}),{status:401,headers:{...headers,"Content-Type":"application/json"}});
   const db=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_ANON_KEY")!,{global:{headers:{Authorization:authorization}}});
+  const {data:authorized,error:authzError}=await db.rpc("emma_is_authorized");
+  if(authzError||authorized!==true)return new Response(JSON.stringify({error:"Access denied"}),{status:403,headers:{...headers,"Content-Type":"application/json"}});
   // Supabase gateway already validates the JWT (verify_jwt=true). Read the verified subject locally to avoid a second Auth round-trip.
   let userId="";
   try{
