@@ -56,10 +56,6 @@ if [ ! -f /root/emma/bridge-token ]; then
   umask 077
   head -c 32 /dev/urandom | od -An -tx1 | tr -d " \\n" > /root/emma/bridge-token
 fi
-if [ -f /root/emma/bridge.pid ]; then
-  kill "\$(cat /root/emma/bridge.pid)" 2>/dev/null || true
-  rm -f /root/emma/bridge.pid
-fi
 ' 
 proot-distro login debian -- env EMMA_DEVICE_KEY="$DEVICE_KEY" EMMA_CLOUD_TOKEN="$EMMA_CLOUD_TOKEN" bash -lc '
 set -euo pipefail
