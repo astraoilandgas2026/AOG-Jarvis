@@ -20,6 +20,7 @@ import { rankTools, PERFORMANCE_RULE } from "./core/performance-engine.js";
 import { saveSnapshot, loadSnapshot, isOffline } from "./core/offline-core.js";
 import { runResearchAgent } from "./modules/research-agent.js?v=1";
 import { TRADING_AGENTS } from "./modules/trading-lab.js";
+import { createMobileBridge } from "./modules/mobile-bridge.js";
 const supabase=createClient(CONFIG.supabaseUrl,CONFIG.supabasePublishableKey);
 const $=s=>document.querySelector(s);
 const command=$("#command"),messages=$("#messages"),chat=$("#chat"),home=$("#home");
@@ -33,6 +34,7 @@ const orb=createOrb({root:$("#orb"),status:$("#orb-status"),onActivate:()=>voice
 orb.setAppearance?.(orbChoice);
 document.documentElement.dataset.emmaOrb=orbChoice.id;
 let localBridge=null;
+let mobileBridge=null;
 async function refreshLocalBridge(){try{const b=await discoverLocalBridge();localBridge=b;orb.setConnection?.(Boolean(b));registerAdapter({id:"local-computer",name:"Emma Local Computer",kind:"desktop",status:b?"connected":"offline",capabilities:["browser","files","apps","screen"],connect:async()=>b});return b}catch{return null}}
 refreshLocalBridge();
 setInterval(()=>{if(!localBridge)refreshLocalBridge()},5000);
@@ -305,7 +307,7 @@ const context=await getGlobalContext(q);const answer=await invokeChat(q,{source_
 logout.onclick=()=>supabase.auth.signOut();$("#execute").onclick=()=>{primeAudio();execute(command.value)};$("#voice").onclick=()=>{primeAudio();voice?.start()};command.addEventListener("keydown",e=>{if(e.key==="Enter")execute(command.value)});
 supabase.auth.onAuthStateChange((_event,session)=>renderSession(session));
 const {data:{session}}=await supabase.auth.getSession();
-if(session)renderSession(session);else{setStatus("CONECTANDO EMMA");try{await ensureAuth()}catch(error){setStatus("CONFIGURACIÓN DE ACCESO PENDIENTE");console.error("Anonymous auth unavailable",error)}}
+if(session)renderSession(session);else{setStatus("CONECTANDO EMMA");try{await ensureAuth()}catch(error){setStatus("CONFIGURACIÓN DE ACCESO PENDIENTE");console.error("Anonymous auth unavailable",error)}}\ntry{ mobileBridge=createMobileBridge({supabase,onStatus:state=>{ if(state.connected) setStatus("EMMA LISTA · SAMSUNG CONECTADO"); },onTask:async task=>({ok:true,received:true,task_type:task.task_type})}); }catch(error){ console.warn("Emma Mobile Bridge:",error); }
 setTimeout(()=>{invoke("jarvis-voice",{setup_voice:true}).catch(()=>{})},0);
 if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=27",{updateViaCache:"none"}).catch(()=>{});
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;install.classList.remove("hidden")});install.onclick=async()=>{if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;install.classList.add("hidden")};
