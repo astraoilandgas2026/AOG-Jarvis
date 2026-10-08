@@ -64,6 +64,10 @@ export EMMA_SUPABASE_URL="https://dhswxxathvzzlybxukat.supabase.co"
 printf "%s" "$EMMA_DEVICE_KEY" > /root/emma/device-key
 printf "%s" "$EMMA_CLOUD_TOKEN" > /root/emma/cloud-token
 chmod 600 /root/emma/device-key /root/emma/cloud-token
+if [ -f /root/emma/bridge.pid ]; then
+  kill "$(cat /root/emma/bridge.pid)" 2>/dev/null || true
+  rm -f /root/emma/bridge.pid
+fi
 nohup env EMMA_BRIDGE_TOKEN="$EMMA_BRIDGE_TOKEN" EMMA_SUPABASE_URL="$EMMA_SUPABASE_URL" EMMA_DEVICE_KEY="$EMMA_DEVICE_KEY" EMMA_CLOUD_TOKEN="$EMMA_CLOUD_TOKEN" node /root/emma/mobile-bridge/server.mjs >/root/emma/bridge.log 2>&1 &
 echo $! > /root/emma/bridge.pid
 sleep 1
