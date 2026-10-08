@@ -57,31 +57,26 @@ if [ ! -f /root/emma/bridge-token ]; then
   head -c 32 /dev/urandom | od -An -tx1 | tr -d " \\n" > /root/emma/bridge-token
 fi
 ' 
-proot-distro login debian -- env EMMA_DEVICE_KEY="$DEVICE_KEY" EMMA_CLOUD_TOKEN="$EMMA_CLOUD_TOKEN" bash -lc '
+proot-distro login debian --detach -- env EMMA_DEVICE_KEY="$DEVICE_KEY" EMMA_CLOUD_TOKEN="$EMMA_CLOUD_TOKEN" bash -lc '
 set -euo pipefail
 export EMMA_BRIDGE_TOKEN="$(cat /root/emma/bridge-token)"
 export EMMA_SUPABASE_URL="https://dhswxxathvzzlybxukat.supabase.co"
 printf "%s" "$EMMA_DEVICE_KEY" > /root/emma/device-key
 printf "%s" "$EMMA_CLOUD_TOKEN" > /root/emma/cloud-token
 chmod 600 /root/emma/device-key /root/emma/cloud-token
-if [ -f /root/emma/bridge.pid ]; then
-  kill "$(cat /root/emma/bridge.pid)" 2>/dev/null || true
-  rm -f /root/emma/bridge.pid
-fi
 : > /root/emma/bridge.log
-env EMMA_BRIDGE_TOKEN="$EMMA_BRIDGE_TOKEN" EMMA_SUPABASE_URL="$EMMA_SUPABASE_URL" EMMA_DEVICE_KEY="$EMMA_DEVICE_KEY" EMMA_CLOUD_TOKEN="$EMMA_CLOUD_TOKEN" node /root/emma/mobile-bridge/server.mjs >/root/emma/bridge.log 2>&1 &
-BRIDGE_PID=$!
-echo "$BRIDGE_PID" > /root/emma/bridge.pid
+node /root/emma/mobile-bridge/server.mjs >>/root/emma/bridge.log 2>&1
+'
 sleep 2
-if kill -0 "$BRIDGE_PID" 2>/dev/null && curl -fsS -H "X-Emma-Token: $EMMA_BRIDGE_TOKEN" http://127.0.0.1:43177/health >/dev/null; then
-  echo '{"ok":true,"name":"Emma Android Local Bridge","cloud_relay":true,"pid":'"$BRIDGE_PID"'}'
+BRIDGE_TOKEN="$(proot-distro login debian -- cat /root/emma/bridge-token)"
+if curl -fsS -H "X-Emma-Token: $BRIDGE_TOKEN" http://127.0.0.1:43177/health >/dev/null; then
+  echo '{"ok":true,"name":"Emma Android Local Bridge","cloud_relay":true}'
   echo "[Emma] BRIDGE ONLINE"
   echo "[Emma] Cloud relay configured"
   echo "[Emma] Token stored locally at /root/emma/bridge-token"
 else
   echo "[Emma] BRIDGE FAILED TO START"
   echo "[Emma] bridge.log:"
-  cat /root/emma/bridge.log
+  proot-distro login debian -- cat /root/emma/bridge.log
   exit 1
 fi
-'
