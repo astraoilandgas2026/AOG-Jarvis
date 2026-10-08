@@ -61,7 +61,10 @@ fi
 EMMA_CLOUD_TOKEN="$(cat "$EMMA_HOME/cloud-token")"
 BRIDGE_TOKEN="$(cat "$EMMA_HOME/bridge-token" 2>/dev/null || proot-distro login debian -- cat /root/emma/bridge-token)"
 
-pkill -f "proot-distro login debian" >/dev/null 2>&1 || true
+if [ -f "$EMMA_HOME/proot.pid" ]; then
+  OLD_PID="$(cat "$EMMA_HOME/proot.pid" 2>/dev/null || true)"
+  if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" >/dev/null 2>&1; then kill "$OLD_PID" >/dev/null 2>&1 || true; fi
+fi
 nohup proot-distro login debian -- env EMMA_DEVICE_KEY="$DEVICE_KEY" EMMA_CLOUD_TOKEN="$EMMA_CLOUD_TOKEN" EMMA_SUPABASE_URL="https://dhswxxathvzzlybxukat.supabase.co" EMMA_BRIDGE_TOKEN="$BRIDGE_TOKEN" bash -lc '
 set -euo pipefail
 printf "%s" "$EMMA_DEVICE_KEY" > /root/emma/device-key
