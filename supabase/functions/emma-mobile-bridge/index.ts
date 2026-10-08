@@ -27,7 +27,9 @@ if(error)return out(req,{error:"POLL_FAILED",detail:error.message},500);return o
 if(op==="complete"){
 const taskId=String(body.task_id||""),status=String(body.status||"completed");
 if(!taskId||!["completed","failed","cancelled"].includes(status))return out(req,{error:"INVALID_COMPLETION"},400);
-const {data,error}=await db.from("emma_mobile_tasks").update({status,result:body.result&&typeof body.result==="object"?body.result:{},error:body.error?String(body.error).slice(0,2000):null,completed_at:new Date().toISOString()}).eq("id",taskId).eq("user_id",userId).select("id,status,completed_at").single();
+const deviceId=String(body.device_id||"");
+if(!deviceId)return out(req,{error:"DEVICE_ID_REQUIRED"},400);
+const {data,error}=await db.from("emma_mobile_tasks").update({status,result:body.result&&typeof body.result==="object"?body.result:{},error:body.error?String(body.error).slice(0,2000):null,completed_at:new Date().toISOString()}).eq("id",taskId).eq("user_id",userId).eq("device_id",deviceId).select("id,status,completed_at").single();
 if(error)return out(req,{error:"COMPLETE_FAILED",detail:error.message},500);return out(req,{ok:true,task:data});
 }
 if(op==="status"){
