@@ -307,7 +307,8 @@ const context=await getGlobalContext(q);const answer=await invokeChat(q,{source_
 logout.onclick=()=>supabase.auth.signOut();$("#execute").onclick=()=>{primeAudio();execute(command.value)};$("#voice").onclick=()=>{primeAudio();voice?.start()};command.addEventListener("keydown",e=>{if(e.key==="Enter")execute(command.value)});
 supabase.auth.onAuthStateChange((_event,session)=>renderSession(session));
 const {data:{session}}=await supabase.auth.getSession();
-if(session)renderSession(session);else{setStatus("CONECTANDO EMMA");try{await ensureAuth()}catch(error){setStatus("CONFIGURACIÓN DE ACCESO PENDIENTE");console.error("Anonymous auth unavailable",error)}}\ntry{ mobileBridge=createMobileBridge({supabase,onStatus:state=>{ if(state.connected) setStatus("EMMA LISTA · SAMSUNG CONECTADO"); },onTask:async task=>({ok:true,received:true,task_type:task.task_type})}); }catch(error){ console.warn("Emma Mobile Bridge:",error); }
+if(session)renderSession(session);else{setStatus("CONECTANDO EMMA");try{await ensureAuth()}catch(error){setStatus("CONFIGURACIÓN DE ACCESO PENDIENTE");console.error("Anonymous auth unavailable",error)}}
+try{ mobileBridge=createMobileBridge({supabase,onStatus:state=>{ if(state.connected) setStatus("EMMA LISTA · SAMSUNG CONECTADO"); },onTask:async task=>({ok:true,received:true,task_type:task.task_type})}); }catch(error){ console.warn("Emma Mobile Bridge:",error); }
 setTimeout(()=>{invoke("jarvis-voice",{setup_voice:true}).catch(()=>{})},0);
 if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=27",{updateViaCache:"none"}).catch(()=>{});
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;install.classList.remove("hidden")});install.onclick=async()=>{if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;install.classList.add("hidden")};
