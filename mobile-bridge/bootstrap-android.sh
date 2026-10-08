@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "[Emma] Preparing Debian userland..."
-if ! proot-distro list 2>/dev/null | grep -q '^debian'; then
+if ! proot-distro login debian -- true >/dev/null 2>&1; then
   proot-distro install debian
 fi
 
